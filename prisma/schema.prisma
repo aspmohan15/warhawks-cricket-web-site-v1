@@ -1,0 +1,421 @@
+// PavilionHQ Cricket Tournament Management System — Production Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum TournamentStatus {
+  upcoming
+  current
+  completed
+  archived
+}
+
+enum MatchStatus {
+  scheduled
+  live
+  completed
+  abandoned
+}
+
+enum PlayerRole {
+  Batsman
+  Bowler
+  All_Rounder
+  Wicket_Keeper
+}
+
+enum BattingStyle {
+  Right_hand_bat
+  Left_hand_bat
+}
+
+enum BowlingStyle {
+  Right_arm_fast
+  Right_arm_medium
+  Left_arm_fast
+  Right_arm_offbreak
+  Right_arm_legbreak
+  Slow_left_arm_orthodox
+}
+
+enum FoodPreference {
+  Veg
+  Non_Veg
+  Jain
+  Vegan
+  Halal
+}
+
+enum MealType {
+  Breakfast
+  Lunch
+  High_Tea
+  Dinner
+}
+
+enum MealStatus {
+  requested
+  confirmed
+  served
+}
+
+enum SponsorTier {
+  Title_Sponsor
+  Powered_By
+  Associate_Sponsor
+  Official_Partner
+  Beverage_Partner
+}
+
+enum ExpenseCategory {
+  Ground_And_Pitch
+  Umpiring_And_Match_Officials
+  Catering_And_Food
+  Live_Streaming_And_Digital_Scoring
+  Trophies_Medals_And_Awards
+  Team_Kits_And_Match_Balls
+  Marketing_And_Media
+  Medical_And_Physiotherapy
+  Miscellaneous
+}
+
+enum UserRole {
+  super_admin
+  tournament_admin
+  scorer_admin
+  read_only
+}
+
+model Tournament {
+  id                       String             @id @default(cuid())
+  name                     String
+  editionNumber            Int
+  year                     Int
+  format                   String             @default("T20")
+  status                   TournamentStatus   @default(upcoming)
+  startDate                DateTime
+  endDate                  DateTime
+  venue                    String
+  city                     String
+  registrationOpen         Boolean            @default(false)
+  registrationStartDate    DateTime?
+  registrationEndDate      DateTime?
+  totalBudgetPointsPerTeam Decimal            @default(10000000) @db.Decimal(12, 2)
+  pointsPerWin             Int                @default(2)
+  pointsPerTie             Int                @default(1)
+  maxSquadSize             Int                @default(18)
+  minSquadSize             Int                @default(14)
+  maxOverseasPlayers       Int                @default(4)
+  description              String?            @db.Text
+  isArchived               Boolean            @default(false)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  teams                    Team[]
+  players                  Player[]
+  matches                  Match[]
+  standings                Standing[]
+  sponsors                 Sponsor[]
+  expenses                 Expense[]
+  foodOrders               FoodOrderRecord[]
+  rules                    TournamentRule[]
+  registrations            RegistrationApplication[]
+  mediaAssets              MediaAsset[]
+  importJobs               ImportJob[]
+  auditLogs                AuditLog[]
+
+  @@unique([name, editionNumber])
+  @@index([status])
+  @@index([year])
+}
+
+model Team {
+  id                   String            @id @default(cuid())
+  tournamentId         String
+  name                 String
+  shortCode            String
+  city                 String
+  primaryColor         String            @default("#0284c7")
+  secondaryColor       String            @default("#0f172a")
+  logoUrl              String?
+  captainPlayerId      String?
+  ownerName            String
+  budgetTotal          Decimal           @default(10000000) @db.Decimal(12, 2)
+  budgetSpent          Decimal           @default(0) @db.Decimal(12, 2)
+  budgetRemaining      Decimal           @default(10000000) @db.Decimal(12, 2)
+  totalPlayersAssigned Int               @default(0)
+  createdAt            DateTime          @default(now())
+
+  tournament           Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  players              Player[]
+  homeMatches          Match[]           @relation("TeamAMatches")
+  awayMatches          Match[]           @relation("TeamBMatches")
+  standings            Standing[]
+  foodOrders           FoodOrderRecord[]
+
+  @@unique([tournamentId, name])
+  @@unique([tournamentId, shortCode])
+  @@index([tournamentId])
+}
+
+model Player {
+  id                 String           @id @default(cuid())
+  tournamentId       String
+  teamId             String?
+  name               String
+  jerseyNumber       Int?
+  role               PlayerRole
+  battingStyle       BattingStyle
+  bowlingStyle       BowlingStyle
+  basePrice          Decimal          @default(500000) @db.Decimal(12, 2)
+  soldPrice          Decimal?         @db.Decimal(12, 2)
+  auctionStatus      String           @default("available") // available, sold, unsold, retained
+  isCaptain          Boolean          @default(false)
+  isOverseas         Boolean          @default(false)
+  photoUrl           String?
+  email              String
+  phone              String
+  city               String
+  shirtSize          String           @default("L")
+  foodPreference     FoodPreference   @default(Veg)
+  registrationStatus String           @default("approved") // pending, approved, rejected, waitlisted
+  paymentStatus      String           @default("paid")
+  matchesPlayed      Int              @default(0)
+  runsScored         Int              @default(0)
+  highestScore       Int              @default(0)
+  wicketsTaken       Int              @default(0)
+  bestBowling        String           @default("-")
+  strikeRate         Decimal          @default(0.0) @db.Decimal(6, 2)
+  economyRate        Decimal          @default(0.0) @db.Decimal(6, 2)
+  createdAt          DateTime         @default(now())
+
+  tournament         Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team               Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  foodOrders         FoodOrderRecord[]
+
+  @@index([tournamentId])
+  @@index([teamId])
+  @@index([auctionStatus])
+}
+
+model Match {
+  id                    String        @id @default(cuid())
+  tournamentId          String
+  matchNumber           Int
+  round                 String        @default("Group Stage")
+  teamAId               String
+  teamBId               String
+  date                  DateTime
+  time                  String
+  venue                 String
+  status                MatchStatus   @default(scheduled)
+  tossWinnerId          String?
+  tossDecision          String?
+  teamAScore            String?
+  teamAOvers            Decimal?      @db.Decimal(4, 1)
+  teamBScore            String?
+  teamBOvers            Decimal?      @db.Decimal(4, 1)
+  winnerId              String?
+  resultSummary         String?
+  manOfTheMatchPlayerId String?
+  isImported            Boolean       @default(false)
+  importSource          String?       // cricheroes, csv_bulk, manual
+  cricheroesMatchId     String?
+  createdAt             DateTime      @default(now())
+
+  tournament            Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamA                 Team          @relation("TeamAMatches", fields: [teamAId], references: [id])
+  teamB                 Team          @relation("TeamBMatches", fields: [teamBId], references: [id])
+
+  @@unique([tournamentId, matchNumber])
+  @@index([tournamentId])
+  @@index([status])
+}
+
+model Standing {
+  id           String     @id @default(cuid())
+  tournamentId String
+  teamId       String
+  matchesPlayed Int       @default(0)
+  won          Int        @default(0)
+  lost         Int        @default(0)
+  tied         Int        @default(0)
+  noResult     Int        @default(0)
+  points       Int        @default(0)
+  runsScored   Int        @default(0)
+  oversFaced   Decimal    @default(0.0) @db.Decimal(6, 1)
+  runsConceded Int        @default(0)
+  oversBowled  Decimal    @default(0.0) @db.Decimal(6, 1)
+  netRunRate   Decimal    @default(0.000) @db.Decimal(6, 3)
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, teamId])
+  @@index([tournamentId])
+}
+
+model Sponsor {
+  id                  String      @id @default(cuid())
+  tournamentId        String
+  name                String
+  tier                SponsorTier
+  contributionAmount  Decimal     @db.Decimal(12, 2)
+  benefitsDescription String      @db.Text
+  logoUrl             String?
+  websiteUrl          String?
+  contactPerson       String
+  contactEmail        String
+  isActive            Boolean     @default(true)
+  displayOnPublicWeb  Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+
+  tournament          Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([tier])
+}
+
+model Expense {
+  id           String          @id @default(cuid())
+  tournamentId String
+  title        String
+  category     ExpenseCategory
+  amount       Decimal         @db.Decimal(12, 2)
+  date         DateTime
+  vendorName   String
+  receiptUrl   String?
+  paymentMode  String          @default("Bank Transfer")
+  paymentStatus String         @default("paid")
+  notes        String?         @db.Text
+  createdAt    DateTime        @default(now())
+
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([category])
+}
+
+model FoodOrderRecord {
+  id                  String         @id @default(cuid())
+  tournamentId        String
+  teamId              String
+  playerId            String
+  mealType            MealType
+  date                DateTime
+  foodChoice          FoodPreference
+  quantity            Int            @default(1)
+  status              MealStatus     @default(requested)
+  specialInstructions String?
+  updatedAt           DateTime       @updatedAt
+
+  tournament          Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team                Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player              Player         @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([mealType])
+  @@index([status])
+}
+
+model TournamentRule {
+  id           String     @id @default(cuid())
+  tournamentId String
+  title        String
+  category     String
+  content      String     @db.Text
+  videoUrl     String?
+  isPublished  Boolean    @default(true)
+  updatedAt    DateTime   @updatedAt
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+}
+
+model RegistrationApplication {
+  id                   String         @id @default(cuid())
+  tournamentId         String
+  fullName             String
+  email                String
+  phone                String
+  age                  Int
+  city                 String
+  primaryRole          PlayerRole
+  battingStyle         BattingStyle
+  bowlingStyle         BowlingStyle
+  preferredJerseyNo    Int?
+  shirtSize            String         @default("L")
+  foodPreference       FoodPreference @default(Veg)
+  cricHeroesProfileUrl String?
+  approvalStatus       String         @default("pending") // pending, approved, rejected, waitlisted
+  paymentStatus        String         @default("pending") // paid, pending, waived
+  applicationDate      DateTime       @default(now())
+  reviewedBy           String?
+  reviewNotes          String?
+
+  tournament           Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([approvalStatus])
+}
+
+model MediaAsset {
+  id           String     @id @default(cuid())
+  tournamentId String
+  title        String
+  category     String
+  fileUrl      String
+  fileType     String
+  fileSizeKb   Int
+  tags         String[]
+  uploadedAt   DateTime   @default(now())
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([category])
+}
+
+model ImportJob {
+  id             String     @id @default(cuid())
+  tournamentId   String
+  jobType        String
+  fileName       String
+  totalRows      Int
+  importedRows   Int
+  skippedRows    Int        @default(0)
+  status         String     @default("completed")
+  importSummary  String     @db.Text
+  errors         String[]
+  importedBy     String
+  createdAt      DateTime   @default(now())
+
+  tournament     Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+}
+
+model AuditLog {
+  id           String     @id @default(cuid())
+  tournamentId String
+  userName     String
+  userRole     UserRole
+  action       String
+  entityType   String
+  entityId     String
+  details      String     @db.Text
+  timestamp    DateTime   @default(now())
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([timestamp])
+}

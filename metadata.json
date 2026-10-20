@@ -1,0 +1,8 @@
+{
+  "name": "Remix Warhawks Cricket Tournament Admin Panel",
+  "description": "Enterprise administration system for cricket tournaments, featuring edition isolation, squad management, CricHeroes match imports, auction room, financial tracking, and role-based permissions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,7 @@
+# Netlify Serverless API Proxy
+/api/*  /.netlify/functions/api/:splat  200
+
+# Netlify SPA redirect rule
+/*      /index.html                     200
+
+# Deployment trigger: 2026-10-20
