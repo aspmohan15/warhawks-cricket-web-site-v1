@@ -4,8 +4,8 @@ import crypto from 'crypto';
 const { Pool } = pg;
 
 const PRIMARY_ADMIN_MOBILE = '+917339041622';
-const DEFAULT_ORGANIZER_PASSWORD = 'warhawks2026';
-const SERVER_AUTH_SECRET = process.env.ORGANIZER_AUTH_SECRET || 'warhawks-super-secure-token-secret-2026';
+const DEFAULT_ORGANIZER_PASSWORD = process.env.DEFAULT_ORGANIZER_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || '';
+const SERVER_AUTH_SECRET = process.env.ORGANIZER_AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 
 let pool = null;
 if (process.env.DATABASE_URL) {
@@ -207,11 +207,6 @@ export async function handler(event) {
         }
       }
 
-      // Master password / demo fallback for Primary Admin
-      if (!otpValid && (cleanOtp === DEFAULT_ORGANIZER_PASSWORD || cleanOtp === '904162') && isPrimary) {
-        otpValid = true;
-      }
-
       if (!otpValid) {
         return jsonResponse(401, { error: 'Invalid or expired verification code. Please check and re-enter.' });
       }
@@ -270,7 +265,7 @@ export async function handler(event) {
         } catch {}
       }
 
-      if (!admin && isPrimary) {
+      if (!admin && isPrimary && DEFAULT_ORGANIZER_PASSWORD) {
         admin = {
           id: 'adm-primary-01',
           name: 'Warhawks Primary Operations Chief',

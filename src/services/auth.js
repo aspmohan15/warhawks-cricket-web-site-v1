@@ -8,8 +8,6 @@ const ORGANIZER_CREDENTIALS_KEY = 'warhawks_organizer_creds_v1';
 // Default official primary administrator credentials
 const DEFAULT_ORGANIZER_CREDENTIALS = {
   mobile: '+91 7339041622',
-  // Standard hashed-compatible verification
-  passwordHash: 'warhawks2026',
   organizerName: 'Warhawks Primary Operations Chief',
   branch: 'Warhawks Tournament Operations & Command',
   email: 'operations@warhawks.org'
@@ -310,9 +308,8 @@ export const verifyAdminOtp = async (mobile, otp) => {
     } catch {}
 
     const isPendingValid = pendingOtp && pendingOtp.otp === cleanOtp && Date.now() <= pendingOtp.expiresAt;
-    const isMasterPassword = cleanOtp === 'warhawks2026' || cleanOtp === '904162';
 
-    if (!isPendingValid && !isMasterPassword) {
+    if (!isPendingValid) {
       throw new Error('Invalid or expired verification code. Please check and re-enter.');
     }
 
@@ -359,8 +356,7 @@ export const verifyAdminOtp = async (mobile, otp) => {
 
 /**
  * Validates Organizer credentials securely (Mobile Number + Password)
- * Supports initial common password 'warhawks2026', server verification,
- * Netlify serverless functions, and local storage fallback.
+ * Supports server verification, Netlify serverless functions, and local storage fallback.
  */
 export const loginOrganizer = async (mobile, password) => {
   const cleanMobile = normalizeMobile(mobile);
@@ -432,21 +428,22 @@ export const loginOrganizer = async (mobile, password) => {
     const adminRecord = admins.find(a => normalizeMobile(a.mobile) === cleanMobile);
 
     const storedCreds = getStoredOrganizerCredentials();
-    const primaryStoredPassword = storedCreds.passwordHash || 'warhawks2026';
 
-    let targetPassword = 'warhawks2026';
+    let targetPassword = '';
     if (adminRecord && adminRecord.password) {
       targetPassword = adminRecord.password;
-    } else if (isPrimary) {
-      targetPassword = primaryStoredPassword || 'warhawks2026';
+    } else if (isPrimary && storedCreds.password) {
+      targetPassword = storedCreds.password;
+    } else if (isPrimary && storedCreds.passwordHash) {
+      targetPassword = storedCreds.passwordHash;
     } else if (adminRecord) {
-      targetPassword = 'warhawks2026';
+      targetPassword = '';
     } else {
       throw new Error('This mobile number is not registered as an authorized tournament administrator.');
     }
 
-    // Strictly match the current active password (once changed, initial default password will no longer work)
-    const isPasswordCorrect = (cleanPassword === targetPassword);
+    // Strictly match the current active password
+    const isPasswordCorrect = Boolean(targetPassword && cleanPassword === targetPassword);
 
     if (!isPasswordCorrect) {
       throw new Error('Invalid administrator credentials. Please check your phone number and password.');
@@ -543,7 +540,9 @@ export const changeAdminPassword = async (currentPassword, newPassword) => {
   const adminIndex = admins.findIndex(a => normalizeMobile(a.mobile) === callerMobile);
 
   const storedCreds = getStoredOrganizerCredentials();
-  const existingPassword = (adminIndex !== -1 && admins[adminIndex].password) ? admins[adminIndex].password : (isPrimary ? (storedCreds.passwordHash || 'warhawks2026') : 'warhawks2026');
+  const existingPassword = (adminIndex !== -1 && admins[adminIndex].password) 
+    ? admins[adminIndex].password 
+    : (isPrimary ? (storedCreds.password || storedCreds.passwordHash || '') : '');
 
   // If server didn't already validate, check current password locally
   if (!serverSuccess) {
@@ -632,6 +631,14 @@ export const createAdministrator = async ({ name, mobile, email, password }) => 
     throw new Error('Please enter a valid 10-digit mobile number.');
   }
 
+  if (!password || !String(password).trim()) {
+    throw new Error('A secure password is required to create an administrator account.');
+  }
+  const cleanPassword = String(password).trim();
+  if (cleanPassword.length < 6) {
+    throw new Error('Password must be at least 6 characters long.');
+  }
+
   // Check duplicate locally
   const currentList = getStoredAdministratorsList();
   if (currentList.some(a => normalizeMobile(a.mobile) === cleanMobile)) {
@@ -646,7 +653,7 @@ export const createAdministrator = async ({ name, mobile, email, password }) => 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ name, mobile: cleanMobile, email, password })
+      body: JSON.stringify({ name, mobile: cleanMobile, email, password: cleanPassword })
     });
     const contentType = res.headers.get('content-type') || '';
     if (res.ok && contentType.includes('application/json')) {
@@ -667,7 +674,7 @@ export const createAdministrator = async ({ name, mobile, email, password }) => 
     try {
       const salt = 'whk_salt_2026';
       let hash = '';
-      const input = (password || 'admin2026').trim() + salt;
+      const input = cleanPassword + salt;
       for (let i = 0; i < input.length; i++) {
         hash += input.charCodeAt(i).toString(16);
       }
@@ -705,6 +712,7 @@ export const createAdministrator = async ({ name, mobile, email, password }) => 
     name: name.trim(),
     mobile: cleanMobile,
     email: (email || '').trim(),
+    password: cleanPassword,
     role: 'admin',
     isActive: true,
     createdAt: new Date().toISOString()

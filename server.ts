@@ -26,8 +26,8 @@ const pool = new Pool({
 // Official Primary & Default Organizer Credentials
 const PRIMARY_ADMIN_MOBILE = '+917339041622';
 const DEFAULT_ORGANIZER_MOBILE = '+91 7339041622';
-const DEFAULT_ORGANIZER_PASSWORD = 'warhawks2026';
-const SERVER_AUTH_SECRET = process.env.ORGANIZER_AUTH_SECRET || 'warhawks-super-secure-token-secret-2026';
+const DEFAULT_ORGANIZER_PASSWORD = process.env.DEFAULT_ORGANIZER_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || '';
+const SERVER_AUTH_SECRET = process.env.ORGANIZER_AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 
 // Helper to normalize Indian mobile numbers
 const normalizeMobile = (input: string | undefined): string => {
@@ -157,7 +157,8 @@ app.post('/api/auth/request-otp', async (req: Request, res: Response) => {
     // If primary admin mobile 7339041622 is requested but not seeded yet, auto-provision
     if (!admin && (cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622'))) {
       const salt = 'whk_salt_2026';
-      const hash = crypto.createHash('sha256').update('warhawks2026' + salt).digest('hex');
+      const initialSeed = DEFAULT_ORGANIZER_PASSWORD || crypto.randomBytes(16).toString('hex');
+      const hash = crypto.createHash('sha256').update(initialSeed + salt).digest('hex');
       const ins = await pool.query(
         `INSERT INTO public.administrators (id, name, mobile, email, password_hash, role, is_active)
          VALUES ('adm-primary-01', 'Warhawks Primary Operations Chief', $1, 'operations@warhawks.org', $2, 'primary_admin', true)
@@ -440,8 +441,8 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
   let admin = adminRes.rows[0];
 
-  // Auto-seed primary admin if needed
-  if (!admin && (cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622'))) {
+  // Auto-seed primary admin if needed and initial password configured in env
+  if (!admin && (cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622')) && DEFAULT_ORGANIZER_PASSWORD) {
     const salt = 'whk_salt_2026';
     const initialHash = crypto.createHash('sha256').update(DEFAULT_ORGANIZER_PASSWORD + salt).digest('hex');
     try {
