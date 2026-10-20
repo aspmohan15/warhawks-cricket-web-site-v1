@@ -61,7 +61,7 @@ export const UserAccessView = ({
     name: '',
     mobile: '',
     email: '',
-    password: 'warhawks2026'
+    password: ''
   });
   const [submittingAdmin, setSubmittingAdmin] = useState(false);
   const [adminError, setAdminError] = useState('');
@@ -69,7 +69,7 @@ export const UserAccessView = ({
   // Emergency Password Reset State (Primary Admin Exclusive)
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [targetAdminForReset, setTargetAdminForReset] = useState(null);
-  const [emergencyNewPassword, setEmergencyNewPassword] = useState('warhawks2026');
+  const [emergencyNewPassword, setEmergencyNewPassword] = useState('');
   const [showEmergencyPassword, setShowEmergencyPassword] = useState(false);
   const [submittingReset, setSubmittingReset] = useState(false);
   const [resetError, setResetError] = useState('');
@@ -145,7 +145,7 @@ export const UserAccessView = ({
 
       onShowToast?.(`Administrator ${created.name} provisioned successfully!`, 'success');
       setAddAdminModalOpen(false);
-      setAdminForm({ name: '', mobile: '', email: '', password: 'warhawks2026' });
+      setAdminForm({ name: '', mobile: '', email: '', password: '' });
       await loadAdmins();
     } catch (err) {
       setAdminError(err.message || 'Failed to create administrator account.');
@@ -179,7 +179,7 @@ export const UserAccessView = ({
   // Open Emergency Reset Password Modal
   const handleOpenResetModal = (admin) => {
     setTargetAdminForReset(admin);
-    setEmergencyNewPassword('warhawks2026');
+    setEmergencyNewPassword('');
     setResetError('');
     setShowEmergencyPassword(false);
     setResetModalOpen(true);
@@ -286,7 +286,7 @@ export const UserAccessView = ({
             User Access & Role-Based Permissions (RBAC)
           </h1>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Administrative hierarchy: <strong>Primary Administrator</strong> (7339041622 · command authority), <strong>Tournament Administrator</strong> (operations), and <strong>Player</strong> (browse & register).
+            Administrative hierarchy: <strong>Primary Administrator</strong> (command authority), <strong>Tournament Administrator</strong> (operations), and <strong>Player</strong> (browse & register).
           </p>
         </div>
 
@@ -344,8 +344,8 @@ export const UserAccessView = ({
               </div>
               <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
                 {isPrimaryAdmin
-                  ? 'As Primary Administrator (7339041622), you can provision new administrators, edit credentials in emergency situations, and remove admins when no longer needed.'
-                  : 'Only the Primary Administrator (7339041622) has permission to provision administrators, override passwords, or revoke access.'}
+                  ? 'As Primary Administrator, you can provision new administrators, edit credentials in emergency situations, and remove admins when no longer needed.'
+                  : 'Only the Primary Administrator has permission to provision administrators, override passwords, or revoke access.'}
               </p>
             </div>
 
@@ -389,7 +389,7 @@ export const UserAccessView = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                  Initial common password is <code className="bg-white px-1 py-0.2 rounded text-slate-900 font-mono font-bold border border-amber-200">warhawks2026</code>. You can change your own password at any time.
+                  Manage your personal administrator password securely. You can update your credentials at any time.
                 </p>
               </div>
             </div>
@@ -966,7 +966,7 @@ export const UserAccessView = ({
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-1">
-                Default: <code className="bg-slate-100 px-1 py-0.2 rounded font-mono text-slate-700">warhawks2026</code>. Administrators can change their password after first login.
+                Set a secure password of at least 6 characters.
               </p>
             </div>
 
@@ -1038,18 +1038,9 @@ export const UserAccessView = ({
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block font-semibold text-slate-700">
-                  New Password <span className="text-rose-500">*</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setEmergencyNewPassword('warhawks2026')}
-                  className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold underline cursor-pointer"
-                >
-                  Use Common Default (warhawks2026)
-                </button>
-              </div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                New Password <span className="text-rose-500">*</span>
+              </label>
 
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />

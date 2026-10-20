@@ -153,9 +153,6 @@ export const ChangePasswordModal = ({
                 {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              Initial common default password: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">warhawks2026</code>
-            </p>
           </div>
 
           {/* New Password */}

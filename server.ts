@@ -462,13 +462,12 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
   const salt = 'whk_salt_2026';
   const computedHash = crypto.createHash('sha256').update(cleanPassword + salt).digest('hex');
-  const defaultHash = crypto.createHash('sha256').update(DEFAULT_ORGANIZER_PASSWORD + salt).digest('hex');
 
-  // Verify password: matches their custom password hash or initial default password
-  const isPasswordMatch = computedHash === admin.password_hash || (admin.password_hash === defaultHash && cleanPassword === DEFAULT_ORGANIZER_PASSWORD);
+  // Verify password: only the current password hash matches; once changed, initial password is not accepted
+  const isPasswordMatch = computedHash === admin.password_hash;
 
   if (!isPasswordMatch) {
-    return res.status(401).json({ error: 'Invalid password. If this is your first sign-in, the initial common password is warhawks2026.' });
+    return res.status(401).json({ error: 'Invalid administrator credentials. Please check your phone number and password.' });
   }
 
   const token = signOrganizerToken(cleanMobile);
@@ -558,9 +557,8 @@ app.post('/api/auth/change-password', requireOrganizer, async (req: Request, res
     // Verify current password
     const salt = 'whk_salt_2026';
     const currentHash = crypto.createHash('sha256').update(currentPassword.trim() + salt).digest('hex');
-    const defaultHash = crypto.createHash('sha256').update(DEFAULT_ORGANIZER_PASSWORD + salt).digest('hex');
 
-    const isCurrentValid = currentHash === admin.password_hash || (admin.password_hash === defaultHash && currentPassword.trim() === DEFAULT_ORGANIZER_PASSWORD);
+    const isCurrentValid = currentHash === admin.password_hash;
 
     if (!isCurrentValid) {
       return res.status(401).json({ error: 'Current password is incorrect. Please re-enter.' });

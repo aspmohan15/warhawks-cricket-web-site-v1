@@ -434,25 +434,22 @@ export const loginOrganizer = async (mobile, password) => {
     const storedCreds = getStoredOrganizerCredentials();
     const primaryStoredPassword = storedCreds.passwordHash || 'warhawks2026';
 
-    let isPasswordCorrect = false;
-    let matchedName = 'Warhawks Tournament Administrator';
-    let matchedRole = 'admin';
-
-    if (adminRecord) {
-      matchedName = adminRecord.name;
-      matchedRole = adminRecord.role || 'admin';
-      const adminPass = adminRecord.password || 'warhawks2026';
-      isPasswordCorrect = (cleanPassword === adminPass || cleanPassword === 'warhawks2026');
+    let targetPassword = 'warhawks2026';
+    if (adminRecord && adminRecord.password) {
+      targetPassword = adminRecord.password;
     } else if (isPrimary) {
-      matchedName = 'Warhawks Primary Operations Chief';
-      matchedRole = 'primary_admin';
-      isPasswordCorrect = (cleanPassword === primaryStoredPassword || cleanPassword === 'warhawks2026');
+      targetPassword = primaryStoredPassword || 'warhawks2026';
+    } else if (adminRecord) {
+      targetPassword = 'warhawks2026';
     } else {
       throw new Error('This mobile number is not registered as an authorized tournament administrator.');
     }
 
+    // Strictly match the current active password (once changed, initial default password will no longer work)
+    const isPasswordCorrect = (cleanPassword === targetPassword);
+
     if (!isPasswordCorrect) {
-      throw new Error('Invalid password. If this is your first sign-in, the initial common password is warhawks2026.');
+      throw new Error('Invalid administrator credentials. Please check your phone number and password.');
     }
 
     serverToken = `whk-org-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -550,7 +547,7 @@ export const changeAdminPassword = async (currentPassword, newPassword) => {
 
   // If server didn't already validate, check current password locally
   if (!serverSuccess) {
-    const isCurrentValid = cleanCurrent === existingPassword || cleanCurrent === 'warhawks2026';
+    const isCurrentValid = cleanCurrent === existingPassword;
     if (!isCurrentValid) {
       throw new Error('Current password is incorrect. Please re-enter.');
     }

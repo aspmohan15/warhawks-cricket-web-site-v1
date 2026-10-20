@@ -287,12 +287,12 @@ export async function handler(event) {
 
       const salt = 'whk_salt_2026';
       const computedHash = crypto.createHash('sha256').update(cleanPassword + salt).digest('hex');
-      const defaultHash = crypto.createHash('sha256').update(DEFAULT_ORGANIZER_PASSWORD + salt).digest('hex');
 
-      const isMatch = computedHash === admin.password_hash || (admin.password_hash === defaultHash && cleanPassword === DEFAULT_ORGANIZER_PASSWORD) || (isPrimary && cleanPassword === DEFAULT_ORGANIZER_PASSWORD);
+      // Once changed, only the new password hash matches; initial password is no longer accepted
+      const isMatch = computedHash === admin.password_hash;
 
       if (!isMatch) {
-        return jsonResponse(401, { error: 'Invalid password. If this is your first sign-in, the initial common password is warhawks2026.' });
+        return jsonResponse(401, { error: 'Invalid administrator credentials. Please check your phone number and password.' });
       }
 
       const token = `whk-org-${crypto.randomBytes(24).toString('hex')}`;
@@ -364,8 +364,7 @@ export async function handler(event) {
 
           const salt = 'whk_salt_2026';
           const curHash = crypto.createHash('sha256').update(currentPassword.trim() + salt).digest('hex');
-          const defHash = crypto.createHash('sha256').update(DEFAULT_ORGANIZER_PASSWORD + salt).digest('hex');
-          if (curHash !== adminRec.password_hash && !(adminRec.password_hash === defHash && currentPassword.trim() === DEFAULT_ORGANIZER_PASSWORD)) {
+          if (curHash !== adminRec.password_hash) {
             return jsonResponse(401, { error: 'Current password is incorrect. Please re-enter.' });
           }
 
