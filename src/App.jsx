@@ -303,6 +303,27 @@ export default function App() {
     showToast('Tournament parameters updated', 'success');
   };
 
+  const handleDeleteTournament = (id) => {
+    try {
+      const editionToDelete = tournaments.find(t => t.id === id);
+      const editionName = editionToDelete?.name || `Edition #${editionToDelete?.editionNumber || id}`;
+
+      db.deleteTournament(id);
+
+      const remainingTournaments = db.getTournaments();
+      const nextActiveId = id === activeTournamentId
+        ? (remainingTournaments[0]?.id || null)
+        : activeTournamentId;
+
+      setActiveTournamentId(nextActiveId);
+      refreshTournamentData(nextActiveId);
+
+      showToast(`Tournament "${editionName}" and associated partition data deleted.`, 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to delete tournament edition.', 'error');
+    }
+  };
+
   // Team CRUD
   const handleCreateTeam = (data) => {
     const targetTournamentId = data.tournamentId || activeTournamentId || activeTournament?.id;
@@ -665,6 +686,7 @@ export default function App() {
                   onSelectEdition={handleSelectEdition}
                   onCreateEdition={handleCreateTournament}
                   onUpdateEdition={handleUpdateTournament}
+                  onDeleteEdition={handleDeleteTournament}
                 />
               )}
 

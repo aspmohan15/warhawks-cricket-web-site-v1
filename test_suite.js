@@ -182,7 +182,54 @@ async function runTests() {
   // Clean up test admin
   await pool.query('DELETE FROM public.administrators WHERE mobile = $1;', [testNewMobile]);
 
-  console.log('--- ALL 9 INTEGRATION & SECURITY TESTS PASSED PERFECTLY! ---');
+  // Test 10: Tournament Edition Creation and Deletion Lifecycle
+  const testTournId = `tourn-test-${Date.now()}`;
+  const tournCreateRes = await fetch('http://localhost:3000/api/tournaments', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + primaryToken
+    },
+    body: JSON.stringify({
+      id: testTournId,
+      name: 'Automated Test Tournament Edition 99',
+      editionNumber: 99,
+      year: 2029,
+      format: 'T20',
+      status: 'upcoming',
+      startDate: '2029-01-01',
+      endDate: '2029-01-10',
+      venue: 'Test Grounds',
+      city: 'Chennai',
+      organizer: 'Warhawks Test Unit',
+      registrationOpen: false,
+      totalBudgetPointsPerTeam: 10000000
+    })
+  });
+  const tournCreated = await tournCreateRes.json();
+  if (!tournCreateRes.ok || tournCreated.id !== testTournId) {
+    throw new Error('Failed to create test tournament edition: ' + JSON.stringify(tournCreated));
+  }
+  console.log('✅ Test 10a Passed: Tournament Edition created:', tournCreated.id, tournCreated.name);
+
+  // Now delete the tournament edition via DELETE /api/tournaments/:id
+  const tournDeleteRes = await fetch(`http://localhost:3000/api/tournaments/${testTournId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer ' + primaryToken
+    }
+  });
+  const tournDeleteData = await tournDeleteRes.json();
+  if (!tournDeleteRes.ok || !tournDeleteData.success) {
+    throw new Error('Failed to delete tournament edition: ' + JSON.stringify(tournDeleteData));
+  }
+  const checkDeleted = await pool.query('SELECT id FROM public.tournaments WHERE id = $1;', [testTournId]);
+  if (checkDeleted.rows.length !== 0) {
+    throw new Error('Tournament edition still exists in database after deletion!');
+  }
+  console.log('✅ Test 10b Passed: Tournament Edition deleted successfully via API.');
+
+  console.log('--- ALL 10 INTEGRATION & SECURITY TESTS PASSED PERFECTLY! ---');
   await pool.end();
   process.exit(0);
 }

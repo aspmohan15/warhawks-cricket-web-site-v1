@@ -7,23 +7,32 @@ import {
   Check,
   Archive,
   Edit,
+  Trash2,
+  AlertTriangle,
   Coins,
   ShieldAlert,
   ShieldCheck
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS } from '../../constants';
+import { isOrganizerAuthenticated } from '../../services/auth';
 
 export const EditionsView = ({
   tournaments,
   activeTournamentId,
   teams,
+  currentUser,
   onSelectEdition,
   onCreateEdition,
-  onUpdateEdition
+  onUpdateEdition,
+  onDeleteEdition
 }) => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState(null);
+  const [deletingEdition, setDeletingEdition] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isOrganizer = currentUser?.role === 'organizer' || isOrganizerAuthenticated();
 
   // Form State
   const [formData, setFormData] = useState({
@@ -98,6 +107,21 @@ export const EditionsView = ({
     if (!editingEdition) return;
     onUpdateEdition(editingEdition.id, editingEdition);
     setEditingEdition(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingEdition) return;
+    setIsDeleting(true);
+    try {
+      if (onDeleteEdition) {
+        await onDeleteEdition(deletingEdition.id);
+      }
+      setDeletingEdition(null);
+    } catch (err) {
+      console.error('Failed to delete tournament edition:', err);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -222,13 +246,26 @@ export const EditionsView = ({
                   </span>
                 )}
 
-                <button
-                  onClick={() => handleOpenEdit(edition)}
-                  className="min-w-[42px] min-h-[42px] p-2 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors flex items-center justify-center cursor-pointer shrink-0"
-                  aria-label="Edit Edition"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => handleOpenEdit(edition)}
+                    className="min-w-[42px] min-h-[42px] p-2 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors flex items-center justify-center cursor-pointer"
+                    aria-label="Edit Edition"
+                    title="Edit Tournament Edition"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  {isOrganizer && (
+                    <button
+                      onClick={() => setDeletingEdition(edition)}
+                      className="min-w-[42px] min-h-[42px] p-2 rounded-lg border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-600 transition-colors flex items-center justify-center cursor-pointer"
+                      aria-label="Delete Edition"
+                      title="Delete Tournament Edition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -368,6 +405,16 @@ export const EditionsView = ({
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
+
+                        {isOrganizer && (
+                          <button
+                            onClick={() => setDeletingEdition(edition)}
+                            className="p-1.5 rounded text-rose-400 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Delete tournament edition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -680,22 +727,114 @@ export const EditionsView = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => setEditingEdition(null)}
-                className="min-h-[40px] px-3.5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="min-h-[40px] px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer"
-              >
-                Save Changes
-              </button>
+            <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-200">
+              {isOrganizer ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const toDelete = editingEdition;
+                    setEditingEdition(null);
+                    setDeletingEdition(toDelete);
+                  }}
+                  className="min-h-[40px] px-3 py-2 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete This Edition</span>
+                </button>
+              ) : <div />}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingEdition(null)}
+                  className="min-h-[40px] px-3.5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="min-h-[40px] px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Delete Tournament Edition Confirmation Modal */}
+      {deletingEdition && (
+        <Modal
+          isOpen={Boolean(deletingEdition)}
+          onClose={() => !isDeleting && setDeletingEdition(null)}
+          title="Delete Tournament Edition"
+          subtitle="Permanent partition removal confirmation"
+          maxWidth="md"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="text-rose-900 leading-relaxed">
+                <span className="font-bold block text-sm mb-0.5 text-rose-950">
+                  Are you sure you want to delete this edition?
+                </span>
+                This action is permanent and cannot be undone. All data partitioned under this tournament will be permanently removed.
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="font-medium">Tournament Name:</span>
+                <span className="font-bold text-slate-900 text-right">{deletingEdition.name}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="font-medium">Edition & Format:</span>
+                <span className="font-mono font-semibold text-slate-800">
+                  Edition #{deletingEdition.editionNumber} · {deletingEdition.year} ({deletingEdition.format})
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="font-medium">Venue & City:</span>
+                <span className="text-slate-800 font-medium">
+                  {deletingEdition.venue}, {deletingEdition.city}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="font-medium">Franchise Teams in Partition:</span>
+                <span className="font-semibold text-slate-800">
+                  {teams.filter(t => t.tournamentId === deletingEdition.id).length} Teams
+                </span>
+              </div>
+
+              {deletingEdition.id === activeTournamentId && (
+                <div className="pt-2 border-t border-slate-200 text-amber-800 font-medium text-[11px] flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>This is currently the active edition. The system will automatically switch to another edition.</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeletingEdition(null)}
+                className="min-h-[42px] px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer transition-colors disabled:opacity-50"
+              >
+                Cancel / Keep Edition
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="min-h-[42px] px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold inline-flex items-center gap-2 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isDeleting ? 'Deleting...' : 'Permanently Delete Edition'}</span>
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

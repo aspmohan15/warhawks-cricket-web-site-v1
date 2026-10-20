@@ -745,6 +745,10 @@ app.patch('/api/tournaments/:id', requireOrganizer, async (req: Request, res: Re
 app.delete('/api/tournaments/:id', requireOrganizer, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    // Clean up dependent records across tournament partitions
+    await pool.query('DELETE FROM public.players WHERE tournament_id = $1;', [id]).catch(() => {});
+    await pool.query('DELETE FROM public.teams WHERE tournament_id = $1;', [id]).catch(() => {});
+    await pool.query('DELETE FROM public.registrations WHERE tournament_id = $1;', [id]).catch(() => {});
     await pool.query('DELETE FROM public.tournaments WHERE id = $1;', [id]);
     return res.json({ success: true, id });
   } catch (err: any) {

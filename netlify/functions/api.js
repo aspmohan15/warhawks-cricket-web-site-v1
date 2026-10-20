@@ -401,13 +401,29 @@ export async function handler(event) {
     }
 
     // 7. Tournaments API
-    if (path === '/tournaments') {
-      if (method === 'GET') {
+    if (path === '/tournaments' || path.startsWith('/tournaments/')) {
+      const match = path.match(/^\/tournaments\/([^/]+)$/);
+      const tournamentId = match ? match[1] : null;
+
+      if (method === 'GET' && !tournamentId) {
         if (pool) {
           const res = await pool.query('SELECT * FROM public.tournaments ORDER BY edition_number DESC;');
           return jsonResponse(200, res.rows);
         }
         return jsonResponse(200, []);
+      }
+
+      if (method === 'DELETE' && tournamentId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          await pool.query('DELETE FROM public.players WHERE tournament_id = $1;', [tournamentId]).catch(() => {});
+          await pool.query('DELETE FROM public.teams WHERE tournament_id = $1;', [tournamentId]).catch(() => {});
+          await pool.query('DELETE FROM public.registrations WHERE tournament_id = $1;', [tournamentId]).catch(() => {});
+          await pool.query('DELETE FROM public.tournaments WHERE id = $1;', [tournamentId]);
+        }
+        return jsonResponse(200, { success: true, id: tournamentId });
       }
     }
 
