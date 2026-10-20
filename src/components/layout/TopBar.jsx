@@ -16,6 +16,7 @@ import {
   Database,
   KeyRound
 } from 'lucide-react';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const TopBar = ({
   currentSection,
@@ -122,7 +123,8 @@ export const TopBar = ({
 
         {/* Responsive Breadcrumb / Current View title */}
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-slate-500 font-medium min-w-0">
-          <span className="hidden sm:inline text-slate-800 font-bold tracking-tight shrink-0 flex items-center gap-1">
+          <span className="hidden sm:inline text-slate-800 font-bold tracking-tight shrink-0 flex items-center gap-1.5">
+            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-5 h-5 object-contain rounded bg-white p-0.2 border border-slate-200 shrink-0" />
             <span>Warhawks</span>
             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-sans">
               Host
@@ -349,9 +351,11 @@ export const TopBar = ({
               className="flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 min-h-[38px] rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label="Organizer Profile and Settings"
             >
-              <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs ring-2 ring-emerald-500/20 shrink-0">
-                🦅
-              </div>
+              <img
+                src={WARHAWKS_LOGO_URL}
+                alt="Warhawks Organizer"
+                className="w-8 h-8 rounded-full object-contain bg-white p-0.5 ring-2 ring-emerald-500/20 shrink-0 border border-slate-200"
+              />
               <div className="hidden md:block text-left max-w-[130px]">
                 <div className="text-xs font-semibold text-slate-800 leading-tight truncate">
                   {currentUser.name}

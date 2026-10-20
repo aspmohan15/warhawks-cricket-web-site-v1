@@ -23,6 +23,7 @@ import {
   Lock,
   Database
 } from 'lucide-react';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const Sidebar = ({
   currentSection,
@@ -91,9 +92,11 @@ export const Sidebar = ({
         {/* Brand Header with Explicit Mobile Close Button */}
         <div className="h-16 px-4 sm:px-5 flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-emerald-900/40">
-              🦅
-            </div>
+            <img
+              src={WARHAWKS_LOGO_URL}
+              alt="Warhawks Official Logo"
+              className="w-10 h-10 rounded-lg object-contain bg-white p-0.5 shadow-md shadow-emerald-950/40 shrink-0 border border-slate-700/60"
+            />
             <div>
               <span className="text-base font-bold text-white tracking-tight block leading-tight">
                 Warhawks
@@ -234,7 +237,10 @@ export const Sidebar = ({
           )}
 
           <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
-            <span className="font-medium text-slate-400">Warhawks Operations</span>
+            <span className="font-medium text-slate-400 flex items-center gap-1.5">
+              <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2" />
+              <span>Warhawks Operations</span>
+            </span>
             <span className="flex items-center gap-1 text-emerald-400 font-mono font-medium text-[10px]">
               <Sparkles className="w-3 h-3" /> Certified
             </span>

@@ -12,6 +12,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { changeAdminPassword } from '../../services/auth';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const ChangePasswordModal = ({
   isOpen,
@@ -106,9 +107,11 @@ export const ChangePasswordModal = ({
         {/* Current Admin Account Badge */}
         <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
-              🦅
-            </div>
+            <img
+              src={WARHAWKS_LOGO_URL}
+              alt="Warhawks Administrator"
+              className="w-8 h-8 rounded-full object-contain bg-white p-0.5 border border-slate-200"
+            />
             <div>
               <div className="font-bold text-slate-900">{currentUser?.name || 'Tournament Administrator'}</div>
               <div className="text-[11px] text-slate-500 font-mono">{currentUser?.mobile}</div>

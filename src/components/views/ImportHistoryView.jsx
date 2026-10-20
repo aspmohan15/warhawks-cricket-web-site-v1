@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { parseCsv } from '../../utils/csv';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const ImportHistoryView = ({
   tournament,
@@ -134,7 +135,8 @@ T Natarajan,Bowler,Left-hand bat,Left-arm fast,500000,Veg,XL,Salem,natarajan@cri
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-purple-50 text-purple-900 text-[10px] font-semibold mb-1 border border-purple-200">
-            <span>🦅 Warhawks Ingestion Engine</span>
+            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+            <span>Warhawks Ingestion Engine</span>
           </div>
           <h1 className="text-xl font-bold text-slate-900">Spreadsheet & CricHeroes Import Engine</h1>
           <p className="text-xs text-slate-500 mt-0.5">

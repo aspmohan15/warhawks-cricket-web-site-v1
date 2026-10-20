@@ -11,6 +11,7 @@ import {
   Video
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const RulesVideosView = ({
   tournament,
@@ -93,8 +94,9 @@ export const RulesVideosView = ({
             Add Rule Article
           </button>
         ) : (
-          <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">
-            🏏 Official Rules Sanctioned by Warhawks
+          <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200 inline-flex items-center gap-1.5">
+            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+            <span>Official Rules Sanctioned by Warhawks</span>
           </span>
         )}
       </div>

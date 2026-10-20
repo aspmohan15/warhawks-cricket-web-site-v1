@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldAlert, ArrowLeft, ShieldCheck, Lock, CheckCircle2 } from 'lucide-react';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const AccessDeniedView = ({
   sectionName,
@@ -10,9 +11,16 @@ export const AccessDeniedView = ({
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 text-center">
       <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-sm space-y-6">
-        {/* Lock Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto ring-8 ring-rose-50/50">
-          <ShieldAlert className="w-8 h-8" />
+        {/* Logo & Shield Icon */}
+        <div className="relative w-20 h-20 mx-auto">
+          <img
+            src={WARHAWKS_LOGO_URL}
+            alt="Warhawks"
+            className="w-20 h-20 rounded-2xl object-contain bg-white p-1 border border-slate-200 shadow-md"
+          />
+          <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center ring-2 ring-white">
+            <Lock className="w-3.5 h-3.5" />
+          </div>
         </div>
 
         {/* Status Code & Title */}

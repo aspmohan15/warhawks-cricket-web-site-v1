@@ -14,7 +14,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
-import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS } from '../../constants';
+import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS, WARHAWKS_LOGO_URL } from '../../constants';
 import { isOrganizerAuthenticated } from '../../services/auth';
 
 export const EditionsView = ({
@@ -224,8 +224,8 @@ export const EditionsView = ({
                 </div>
                 <div className="col-span-2 flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                   <span className="text-slate-500 font-medium">Tournament Host:</span>
-                  <span className="font-bold text-slate-900 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
                     <span>{edition.organizer || DEFAULT_ORGANIZER_NAME}</span>
                     <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded font-sans">Organizer</span>
                   </span>
@@ -329,8 +329,9 @@ export const EditionsView = ({
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                          <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
                             <span className="text-slate-400">Host:</span>
+                            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
                             <span className="font-semibold text-slate-700">{edition.organizer || DEFAULT_ORGANIZER_NAME}</span>
                             <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded font-sans">Organizer</span>
                           </div>

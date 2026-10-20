@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { exportToCsv } from '../../utils/csv';
-import { EXPENSE_CATEGORIES } from '../../constants';
+import { EXPENSE_CATEGORIES, WARHAWKS_LOGO_URL } from '../../constants';
 
 export const ExpensesView = ({
   tournament,
@@ -115,7 +115,10 @@ export const ExpensesView = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-semibold mb-1">
-            <span className="text-emerald-400">🦅 Warhawks Treasury</span>
+            <span className="text-emerald-400 flex items-center gap-1.5">
+              <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+              <span>Warhawks Treasury</span>
+            </span>
             <span className="text-slate-400">·</span>
             <span className="text-slate-200">Tournament Operations Ledger</span>
           </div>

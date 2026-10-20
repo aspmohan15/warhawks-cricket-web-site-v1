@@ -14,6 +14,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const AuctionView = ({
   tournament,
@@ -233,6 +234,7 @@ export const AuctionView = ({
                   </>
                 ) : (
                   <div className="px-3.5 py-2 rounded-lg bg-slate-800/90 text-slate-300 text-xs border border-slate-700 flex items-center gap-2">
+                    <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span>Live Spectator Mode · Official Warhawks Gavel</span>
                   </div>

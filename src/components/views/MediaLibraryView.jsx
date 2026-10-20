@@ -13,6 +13,7 @@ import {
   CloudUpload
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const MediaLibraryView = ({
   tournament,
@@ -111,7 +112,10 @@ export const MediaLibraryView = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-semibold mb-1">
-            <span className="text-emerald-400">🦅 Warhawks Media Assets</span>
+            <span className="text-emerald-400 flex items-center gap-1.5">
+              <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+              <span>Warhawks Media Assets</span>
+            </span>
             <span className="text-slate-400">·</span>
             <span className="text-slate-200">Broadcast & Marketing Repository</span>
           </div>

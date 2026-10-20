@@ -29,7 +29,8 @@ import {
   FOOD_PREFERENCES,
   PLAYER_ROLES,
   BATTING_STYLES,
-  BOWLING_STYLES
+  BOWLING_STYLES,
+  WARHAWKS_LOGO_URL
 } from '../../constants';
 
 export const RegistrationView = ({
@@ -292,7 +293,8 @@ export const RegistrationView = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-semibold mb-1 border border-emerald-200">
-            <span>🦅 Warhawks Tournament Admissions</span>
+            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+            <span>Warhawks Tournament Admissions</span>
             <span>·</span>
             <span className="capitalize">{isOrganizer ? 'Organizer Queue' : 'Player Portal'}</span>
           </div>
@@ -893,9 +895,12 @@ export const RegistrationView = ({
                               </span>
                             </div>
                           </div>
-                          <span className="text-[11px] font-bold text-slate-900 mt-2 block">
-                            Warhawks Tournament UPI
-                          </span>
+                          <div className="flex items-center justify-center gap-1.5 mt-2">
+                            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-4 h-4 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+                            <span className="text-[11px] font-bold text-slate-900">
+                              Warhawks Tournament UPI
+                            </span>
+                          </div>
                           <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded mt-0.5 border border-emerald-200">
                             Verified Host Merchant
                           </span>
@@ -933,8 +938,9 @@ export const RegistrationView = ({
                               <span className="text-[10px] text-slate-400 uppercase font-semibold block">
                                 Payee Name
                               </span>
-                              <span className="font-bold text-slate-900 truncate block mt-0.5">
-                                Warhawks Tournament Operations
+                              <span className="font-bold text-slate-900 truncate flex items-center gap-1.5 mt-0.5">
+                                <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+                                <span>Warhawks Tournament Operations</span>
                               </span>
                             </div>
 

@@ -13,6 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const FixturesResultsView = ({
   tournament,
@@ -110,7 +111,8 @@ export const FixturesResultsView = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-semibold mb-1 border border-emerald-200">
-            <span>🦅 Sanctioned & Managed by Warhawks</span>
+            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+            <span>Sanctioned & Managed by Warhawks</span>
           </div>
           <h1 className="text-xl font-bold text-slate-900">Fixtures, Live Scores & Results</h1>
           <p className="text-xs text-slate-500 mt-0.5">

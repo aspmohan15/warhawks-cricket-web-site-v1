@@ -7,6 +7,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { exportToCsv } from '../../utils/csv';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const StandingsView = ({
   tournament,
@@ -40,7 +41,8 @@ export const StandingsView = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-semibold mb-1 border border-emerald-200">
-            <span>🦅 Official Standings · Certified by Warhawks</span>
+            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+            <span>Official Standings · Certified by Warhawks</span>
           </div>
           <h1 className="text-xl font-bold text-slate-900">Points Table & Net Run Rate (NRR)</h1>
           <p className="text-xs text-slate-500 mt-0.5">

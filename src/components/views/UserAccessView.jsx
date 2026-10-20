@@ -36,6 +36,7 @@ import {
   resetAdminPasswordByPrimary,
   normalizeMobile
 } from '../../services/auth';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const UserAccessView = ({
   tournament,
@@ -278,7 +279,10 @@ export const UserAccessView = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <span className="font-bold text-emerald-700">🦅 Warhawks Security</span>
+            <span className="font-bold text-emerald-700 flex items-center gap-1.5">
+              <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-4 h-4 object-contain rounded bg-white p-0.2 border border-slate-200" />
+              <span>Warhawks Security</span>
+            </span>
             <span aria-hidden="true">·</span>
             <span>Role-Based Access Control</span>
           </div>
@@ -293,8 +297,14 @@ export const UserAccessView = ({
         {/* Current Active Session Badge */}
         <div className="w-full sm:w-auto p-2.5 sm:p-2 bg-slate-50 sm:bg-transparent rounded-lg sm:rounded-none border sm:border-0 border-slate-200 flex items-center justify-between sm:justify-end gap-2.5 shrink-0 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              {isPrimaryAdmin ? '👑' : '🦅'}
+            <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-slate-200">
+              {isPrimaryAdmin ? (
+                <span title="Primary Administrator">👑</span>
+              ) : currentUser?.role === 'organizer' ? (
+                <img src={WARHAWKS_LOGO_URL} alt="Warhawks Organizer" className="w-full h-full object-contain bg-white p-0.5" />
+              ) : (
+                <span>👤</span>
+              )}
             </div>
             <div className="text-left">
               <div className="font-bold text-slate-900 truncate max-w-[140px] sm:max-w-[180px]">
@@ -423,11 +433,15 @@ export const UserAccessView = ({
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 ${
-                            isPrimary ? 'bg-amber-600' : 'bg-emerald-600'
+                          className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 overflow-hidden ${
+                            isPrimary ? 'bg-amber-600' : 'bg-slate-900 border border-slate-200'
                           }`}
                         >
-                          {isPrimary ? '👑' : '🦅'}
+                          {isPrimary ? (
+                            <span>👑</span>
+                          ) : (
+                            <img src={WARHAWKS_LOGO_URL} alt="Admin" className="w-full h-full object-contain bg-white p-0.5" />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="font-bold text-slate-900 text-xs truncate flex items-center gap-1.5">
@@ -571,11 +585,15 @@ export const UserAccessView = ({
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
                             <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 ${
-                                isPrimary ? 'bg-amber-600' : 'bg-emerald-600'
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 overflow-hidden ${
+                                isPrimary ? 'bg-amber-600' : 'bg-slate-900 border border-slate-200'
                               }`}
                             >
-                              {isPrimary ? '👑' : '🦅'}
+                              {isPrimary ? (
+                                <span>👑</span>
+                              ) : (
+                                <img src={WARHAWKS_LOGO_URL} alt="Admin" className="w-full h-full object-contain bg-white p-0.5" />
+                              )}
                             </div>
                             <div>
                               <div className="font-bold text-slate-900 flex items-center gap-1.5">
@@ -716,7 +734,7 @@ export const UserAccessView = ({
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
-            <span>🦅</span>
+            <img src={WARHAWKS_LOGO_URL} alt="Organizer" className="w-4 h-4 object-contain rounded-xs bg-white p-0.2 shrink-0" />
             <span>Organizer</span>
             {currentUser.role === 'organizer' && <Check className="w-3.5 h-3.5" />}
           </button>
@@ -790,7 +808,10 @@ export const UserAccessView = ({
               </div>
               <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
                 <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/60 border border-emerald-100">
-                  <span className="text-slate-600 font-medium">🦅 Organizer:</span>
+                  <span className="text-slate-600 font-medium flex items-center gap-1.5">
+                    <img src={WARHAWKS_LOGO_URL} alt="Organizer" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+                    <span>Organizer:</span>
+                  </span>
                   {row.organizer ? (
                     <span className="font-bold text-emerald-700 flex items-center gap-1">
                       <Check className="w-3.5 h-3.5" />
@@ -830,8 +851,9 @@ export const UserAccessView = ({
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4">Capability & Scope</th>
                 <th className="py-3 px-4 text-center w-36">
-                  <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-                    <span>🦅 Organizer</span>
+                  <span className="inline-flex items-center gap-1.5 text-emerald-700 font-bold">
+                    <img src={WARHAWKS_LOGO_URL} alt="Organizer" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
+                    <span>Organizer</span>
                   </span>
                 </th>
                 <th className="py-3 px-4 text-center w-36">

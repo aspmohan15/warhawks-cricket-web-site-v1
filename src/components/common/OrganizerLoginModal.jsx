@@ -13,6 +13,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { loginOrganizer, normalizeMobile } from '../../services/auth';
+import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const OrganizerLoginModal = ({
   isOpen,
@@ -61,9 +62,11 @@ export const OrganizerLoginModal = ({
           </button>
 
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-lg font-bold shadow-md shadow-emerald-950/50">
-              🦅
-            </div>
+            <img
+              src={WARHAWKS_LOGO_URL}
+              alt="Warhawks Official Logo"
+              className="w-12 h-12 rounded-xl object-contain bg-white p-1 shadow-md shadow-emerald-950/50 shrink-0 border border-slate-700/60"
+            />
             <div>
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block font-mono">
                 Warhawks Official Host

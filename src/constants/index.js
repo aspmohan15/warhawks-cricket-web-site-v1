@@ -3,6 +3,8 @@
 // Official Tournament Host & Organizer Identity
 export const DEFAULT_ORGANIZER_NAME = 'Warhawks';
 
+export const WARHAWKS_LOGO_URL = '/assets/aistudio/warhawks.logo_359e9cdf.JPG';
+
 export const ORGANIZER_DETAILS = {
   name: 'Warhawks',
   shortName: 'Warhawks',
@@ -10,7 +12,8 @@ export const ORGANIZER_DETAILS = {
   branch: 'Warhawks Tournament Operations',
   description: 'Warhawks is the official tournament organizing branch responsible for creating, hosting, and sanctioning tournaments on this platform.',
   contactEmail: 'tournaments@warhawks.org',
-  headquarters: 'Warhawks Sports Command & Tournament Operations'
+  headquarters: 'Warhawks Sports Command & Tournament Operations',
+  logoUrl: WARHAWKS_LOGO_URL
 };
 
 export const TOURNAMENT_STATUSES = ['upcoming', 'current', 'completed', 'archived'];

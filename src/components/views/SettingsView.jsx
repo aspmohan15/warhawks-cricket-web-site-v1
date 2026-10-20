@@ -17,7 +17,7 @@ import {
   Phone,
   Lock
 } from 'lucide-react';
-import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS } from '../../constants';
+import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS, WARHAWKS_LOGO_URL } from '../../constants';
 import { testSupabaseConnection, updateSupabaseConfig, getSupabaseConfig } from '../../services/supabase';
 import { uploadUpiQrToSupabase, DEFAULT_WARHAWKS_UPI } from '../../services/supabaseStorage';
 import { getStoredOrganizerCredentials, updateOrganizerCredentials } from '../../services/auth';
@@ -183,9 +183,11 @@ export const SettingsView = ({
         <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                🦅
-              </div>
+              <img
+                src={WARHAWKS_LOGO_URL}
+                alt="Warhawks Official Logo"
+                className="w-10 h-10 rounded-lg object-contain bg-white p-0.5 border border-slate-200 shrink-0 shadow-xs"
+              />
               <div className="min-w-0">
                 <h3 className="text-sm font-bold text-slate-900 truncate">Official Tournament Organizer Brand</h3>
                 <p className="text-xs text-slate-500 truncate">Designated organization branch responsible for hosting, scheduling, and sanctioning</p>
