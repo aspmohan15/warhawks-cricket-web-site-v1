@@ -78,9 +78,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, extensions, pg_catalog, pg_temp
 AS $$
-DECLARE
-  v_target_mobile text := '+919820012345';
   v_clean_input text;
+  v_admin record;
   v_token text;
 BEGIN
   v_clean_input := regexp_replace(COALESCE(p_mobile, ''), '[^0-9+]', '', 'g');
@@ -90,23 +89,31 @@ BEGIN
     v_clean_input := '+' || v_clean_input;
   END IF;
 
-  IF (v_clean_input = v_target_mobile OR v_clean_input = '9820012345') AND trim(COALESCE(p_password, '')) = 'warhawks2026' THEN
+  SELECT id, name, mobile, email, role, is_active INTO v_admin
+  FROM public.administrators
+  WHERE (mobile = v_clean_input OR mobile = replace(v_clean_input, '+91', ''))
+    AND password_hash = encode(digest(trim(COALESCE(p_password, '')) || 'whk_salt_2026', 'sha256'), 'hex')
+    AND is_active = true
+  LIMIT 1;
+
+  IF v_admin.id IS NOT NULL THEN
     v_token := 'whk-org-' || replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 
     INSERT INTO public.organizer_sessions (token, mobile, created_at, expires_at)
-    VALUES (v_token, '+91 98200 12345', timezone('utc'::text, now()), timezone('utc'::text, now()) + interval '7 days')
+    VALUES (v_token, v_admin.mobile, timezone('utc'::text, now()), timezone('utc'::text, now()) + interval '7 days')
     ON CONFLICT (token) DO UPDATE SET expires_at = timezone('utc'::text, now()) + interval '7 days';
 
     RETURN jsonb_build_object(
       'success', true,
       'token', v_token,
       'user', jsonb_build_object(
-        'id', 'usr-organizer-01',
-        'name', 'Warhawks Tournament Operations',
-        'email', 'operations@warhawks.org',
-        'mobile', '+91 98200 12345',
+        'id', v_admin.id,
+        'name', v_admin.name,
+        'email', COALESCE(v_admin.email, 'operations@warhawks.org'),
+        'mobile', v_admin.mobile,
         'role', 'organizer',
-        'title', 'Official Tournament Organizer & Host'
+        'isPrimaryAdmin', (v_admin.role = 'primary_admin'),
+        'title', CASE WHEN v_admin.role = 'primary_admin' THEN 'Primary Administrator & Command Chief' ELSE 'Tournament Administrator' END
       )
     );
   ELSE

@@ -3,7 +3,16 @@ import crypto from 'crypto';
 
 const { Pool } = pg;
 
-const PRIMARY_ADMIN_MOBILE = '+917339041622';
+const normalizeMobile = (input) => {
+  if (!input) return '';
+  const cleaned = String(input).replace(/[\s\-()]/g, '');
+  if (/^[6-9]\d{9}$/.test(cleaned)) return `+91${cleaned}`;
+  if (/^91[6-9]\d{9}$/.test(cleaned)) return `+${cleaned}`;
+  if (/^\+91[6-9]\d{9}$/.test(cleaned)) return cleaned;
+  return cleaned;
+};
+
+const PRIMARY_ADMIN_MOBILE = process.env.PRIMARY_ADMIN_MOBILE ? normalizeMobile(process.env.PRIMARY_ADMIN_MOBILE) : '';
 const DEFAULT_ORGANIZER_PASSWORD = process.env.DEFAULT_ORGANIZER_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || '';
 const SERVER_AUTH_SECRET = process.env.ORGANIZER_AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 
@@ -21,15 +30,6 @@ if (process.env.DATABASE_URL) {
 
 // In-memory OTP store for serverless execution fallback
 const memoryOtpStore = new Map();
-
-const normalizeMobile = (input) => {
-  if (!input) return '';
-  const cleaned = String(input).replace(/[\s\-()]/g, '');
-  if (/^[6-9]\d{9}$/.test(cleaned)) return `+91${cleaned}`;
-  if (/^91[6-9]\d{9}$/.test(cleaned)) return `+${cleaned}`;
-  if (/^\+91[6-9]\d{9}$/.test(cleaned)) return cleaned;
-  return cleaned;
-};
 
 const verifyOrganizerToken = (token) => {
   if (!token) return false;
@@ -108,8 +108,8 @@ export async function handler(event) {
         return jsonResponse(400, { error: 'Please enter a valid organizer mobile number.' });
       }
 
-      const isPrimary = cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622');
-      let adminName = isPrimary ? 'Warhawks Primary Operations Chief' : null;
+      let isPrimary = Boolean(PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE);
+      let adminName = null;
 
       if (pool) {
         try {
@@ -120,6 +120,9 @@ export async function handler(event) {
           );
           if (adminRes.rows[0]) {
             adminName = adminRes.rows[0].name;
+            if (adminRes.rows[0].role === 'primary_admin') {
+              isPrimary = true;
+            }
           }
         } catch (dbErr) {
           console.warn('[Netlify Function] DB query error on request-otp:', dbErr.message);
@@ -178,7 +181,19 @@ export async function handler(event) {
         return jsonResponse(400, { error: 'Mobile number and verification code are required.' });
       }
 
-      const isPrimary = cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622');
+      let adminRecord = null;
+      if (pool) {
+        try {
+          const aRes = await pool.query(
+            `SELECT id, name, mobile, email, role, is_active FROM public.administrators
+             WHERE (mobile = $1 OR mobile = $2) AND is_active = true LIMIT 1;`,
+            [cleanMobile, cleanMobile.replace(/^\+91/, '')]
+          );
+          adminRecord = aRes.rows[0];
+        } catch {}
+      }
+
+      const isPrimary = (adminRecord?.role === 'primary_admin') || Boolean(PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE);
       let otpValid = false;
 
       // Check DB OTP
@@ -227,12 +242,12 @@ export async function handler(event) {
         success: true,
         token,
         user: {
-          id: isPrimary ? 'adm-primary-01' : `adm-${Date.now().toString(36)}`,
-          name: isPrimary ? 'Warhawks Primary Operations Chief' : 'Warhawks Tournament Administrator',
-          email: isPrimary ? 'operations@warhawks.org' : 'admin@warhawks.org',
-          mobile: cleanMobile,
+          id: adminRecord?.id || (isPrimary ? 'adm-primary-01' : `adm-${Date.now().toString(36)}`),
+          name: adminRecord?.name || (isPrimary ? 'Warhawks Primary Operations Chief' : 'Warhawks Tournament Administrator'),
+          email: adminRecord?.email || (isPrimary ? 'operations@warhawks.org' : 'admin@warhawks.org'),
+          mobile: adminRecord?.mobile || cleanMobile,
           role: 'organizer',
-          adminRole: isPrimary ? 'primary_admin' : 'admin',
+          adminRole: adminRecord?.role || (isPrimary ? 'primary_admin' : 'admin'),
           isPrimaryAdmin: isPrimary,
           title: isPrimary ? 'Primary Administrator & Command Chief' : 'Tournament Administrator'
         }
@@ -251,7 +266,6 @@ export async function handler(event) {
         return jsonResponse(400, { error: 'Please enter your administrator password.' });
       }
 
-      const isPrimary = cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622');
       let admin = null;
 
       if (pool) {
@@ -264,6 +278,8 @@ export async function handler(event) {
           admin = adminRes.rows[0];
         } catch {}
       }
+
+      const isPrimary = (admin?.role === 'primary_admin') || Boolean(PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE);
 
       if (!admin && isPrimary && DEFAULT_ORGANIZER_PASSWORD) {
         admin = {
@@ -445,7 +461,17 @@ export async function handler(event) {
           callerMobile = p.split(':')[0] || '';
         } catch {}
       }
-      const isCallerPrimary = !callerMobile || callerMobile === PRIMARY_ADMIN_MOBILE || callerMobile.endsWith('7339041622');
+      let callerAdmin = null;
+      if (pool && callerMobile) {
+        try {
+          const caRes = await pool.query(
+            `SELECT role FROM public.administrators WHERE (mobile = $1 OR mobile = $2) AND is_active = true LIMIT 1;`,
+            [callerMobile, callerMobile.replace(/^\+91/, '')]
+          );
+          callerAdmin = caRes.rows[0];
+        } catch {}
+      }
+      const isCallerPrimary = !callerMobile || (callerAdmin?.role === 'primary_admin') || Boolean(PRIMARY_ADMIN_MOBILE && callerMobile === PRIMARY_ADMIN_MOBILE);
 
       // GET /admins
       if (path === '/admins' && method === 'GET') {

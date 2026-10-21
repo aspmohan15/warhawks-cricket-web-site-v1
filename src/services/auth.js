@@ -7,7 +7,7 @@ const ORGANIZER_CREDENTIALS_KEY = 'warhawks_organizer_creds_v1';
 
 // Default official primary administrator credentials
 const DEFAULT_ORGANIZER_CREDENTIALS = {
-  mobile: '+91 7339041622',
+  mobile: import.meta.env.VITE_PRIMARY_ADMIN_MOBILE || '',
   organizerName: 'Warhawks Primary Operations Chief',
   branch: 'Warhawks Tournament Operations & Command',
   email: 'operations@warhawks.org'
@@ -97,7 +97,7 @@ const INITIAL_AUTHORIZED_ADMINS = [
   {
     id: 'adm-primary-01',
     name: 'Warhawks Primary Operations Chief',
-    mobile: '+91 7339041622',
+    mobile: import.meta.env.VITE_PRIMARY_ADMIN_MOBILE || '',
     email: 'operations@warhawks.org',
     role: 'primary_admin',
     isActive: true,
@@ -135,7 +135,10 @@ export const requestAdminOtp = async (mobile) => {
     throw new Error('Please enter your administrator mobile number.');
   }
 
-  const isPrimary = cleanMobile === '+917339041622' || cleanMobile.endsWith('7339041622');
+  const primaryMobile = normalizeMobile(import.meta.env.VITE_PRIMARY_ADMIN_MOBILE);
+  const admins = getStoredAdministratorsList();
+  const matchedAdmin = admins.find(a => normalizeMobile(a.mobile) === cleanMobile);
+  const isPrimary = matchedAdmin?.role === 'primary_admin' || Boolean(primaryMobile && cleanMobile === primaryMobile);
 
   // 1. Try server API / Netlify Function
   try {
@@ -240,7 +243,10 @@ export const verifyAdminOtp = async (mobile, otp) => {
     throw new Error('Please enter the 6-digit verification code.');
   }
 
-  const isPrimary = cleanMobile === '+917339041622' || cleanMobile.endsWith('7339041622');
+  const primaryMobile = normalizeMobile(import.meta.env.VITE_PRIMARY_ADMIN_MOBILE);
+  const admins = getStoredAdministratorsList();
+  const matchedAdmin = admins.find(a => normalizeMobile(a.mobile) === cleanMobile);
+  const isPrimary = matchedAdmin?.role === 'primary_admin' || Boolean(primaryMobile && cleanMobile === primaryMobile);
   let sessionResult = null;
 
   // 1. Try server API / Netlify Function
@@ -365,7 +371,10 @@ export const loginOrganizer = async (mobile, password) => {
   if (!cleanMobile) throw new Error('Please enter your administrator mobile number.');
   if (!cleanPassword) throw new Error('Please enter your administrator password.');
 
-  const isPrimary = cleanMobile === '+917339041622' || cleanMobile.endsWith('7339041622');
+  const primaryMobile = normalizeMobile(import.meta.env.VITE_PRIMARY_ADMIN_MOBILE);
+  const admins = getStoredAdministratorsList();
+  const matchedAdmin = admins.find(a => normalizeMobile(a.mobile) === cleanMobile);
+  const isPrimary = matchedAdmin?.role === 'primary_admin' || Boolean(primaryMobile && cleanMobile === primaryMobile);
 
   let serverToken = null;
   let userData = null;
@@ -505,7 +514,11 @@ export const changeAdminPassword = async (currentPassword, newPassword) => {
   }
 
   const callerMobile = normalizeMobile(session.user.mobile);
-  const isPrimary = session.user.isPrimaryAdmin || callerMobile === '+917339041622' || callerMobile.endsWith('7339041622');
+  const isPrimary = Boolean(
+    session.user.isPrimaryAdmin ||
+    session.user.adminRole === 'primary_admin' ||
+    session.user.role === 'primary_admin'
+  );
 
   let serverSuccess = false;
 
@@ -780,7 +793,7 @@ export const deleteAdministrator = async (id) => {
   // Prevent deleting primary admin
   const list = getStoredAdministratorsList();
   const target = list.find(a => a.id === id);
-  if (target?.role === 'primary_admin' || target?.mobile?.includes('7339041622')) {
+  if (target?.role === 'primary_admin' || target?.id === 'adm-primary-01') {
     throw new Error('The Primary Administrator account cannot be deleted.');
   }
 
@@ -937,7 +950,6 @@ export const isPrimaryAdminAuthenticated = () => {
   return Boolean(
     session?.user?.isPrimaryAdmin ||
     session?.user?.adminRole === 'primary_admin' ||
-    session?.user?.mobile === '+917339041622' ||
-    session?.user?.mobile?.endsWith('7339041622')
+    session?.user?.role === 'primary_admin'
   );
 };

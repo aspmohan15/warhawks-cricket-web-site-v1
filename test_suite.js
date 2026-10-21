@@ -9,29 +9,30 @@ async function runTests() {
   console.log('--- Starting Warhawks Automated Verification ---');
 
   // Test 1: Verify Initial Primary Administrator in Database
-  const adminRes = await pool.query("SELECT id, name, mobile, role, is_active FROM public.administrators WHERE mobile = '+917339041622';");
+  const adminRes = await pool.query("SELECT id, name, mobile, role, is_active FROM public.administrators WHERE role = 'primary_admin' LIMIT 1;");
   if (adminRes.rows.length === 0 || adminRes.rows[0].role !== 'primary_admin') {
-    throw new Error('Primary Admin 7339041622 not found or not primary_admin');
+    throw new Error('Primary Admin not found or not primary_admin');
   }
-  console.log('✅ Test 1 Passed: Primary Admin verified:', adminRes.rows[0].name, adminRes.rows[0].mobile);
+  const primaryAdmin = adminRes.rows[0];
+  console.log('✅ Test 1 Passed: Primary Admin verified:', primaryAdmin.name, primaryAdmin.role);
 
   // Test 2: Request OTP for Primary Admin via /api/auth/request-otp
   const reqRes = await fetch('http://localhost:3000/api/auth/request-otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mobile: '7339041622' })
+    body: JSON.stringify({ mobile: primaryAdmin.mobile })
   });
   const reqData = await reqRes.json();
   if (!reqRes.ok || !reqData.success || !reqData.devOtp) {
     throw new Error('Failed to request OTP: ' + JSON.stringify(reqData));
   }
-  console.log('✅ Test 2 Passed: OTP generated for 7339041622:', reqData.devOtp);
+  console.log('✅ Test 2 Passed: OTP generated for Primary Admin');
 
   // Test 3: Verify OTP and Obtain Token
   const verRes = await fetch('http://localhost:3000/api/auth/verify-otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mobile: '7339041622', otp: reqData.devOtp })
+    body: JSON.stringify({ mobile: primaryAdmin.mobile, otp: reqData.devOtp })
   });
   const verData = await verRes.json();
   if (!verRes.ok || !verData.token || !verData.user?.isPrimaryAdmin) {
@@ -53,7 +54,7 @@ async function runTests() {
       name: 'Test Associate Admin',
       mobile: testNewMobile,
       email: 'test.admin@warhawks.org',
-      password: 'password2026'
+      password: 'DynamicSecret_' + Date.now()
     })
   });
   const createAdminData = await createAdminRes.json();
@@ -90,7 +91,7 @@ async function runTests() {
     body: JSON.stringify({
       name: 'Unauthorized Admin',
       mobile: '+919999900000',
-      password: 'hackerpassword'
+      password: 'DynamicSecret_' + (Date.now() + 1)
     })
   });
   if (forbiddenCreate.status !== 403) {

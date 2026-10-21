@@ -50,8 +50,7 @@ export const UserAccessView = ({
   const isPrimaryAdmin = Boolean(
     currentUser?.isPrimaryAdmin ||
     currentUser?.adminRole === 'primary_admin' ||
-    currentUser?.mobile?.endsWith('7339041622') ||
-    currentUser?.phone?.endsWith('7339041622')
+    currentUser?.role === 'primary_admin'
   );
 
   // Administrator Management State (Exclusively for Primary Admin)
@@ -97,7 +96,7 @@ export const UserAccessView = ({
           {
             id: 'adm-primary-01',
             name: 'Warhawks Primary Operations Chief',
-            mobile: '+917339041622',
+            mobile: currentUser?.mobile || '',
             email: 'operations@warhawks.org',
             role: 'primary_admin',
             isActive: true,
@@ -157,7 +156,7 @@ export const UserAccessView = ({
 
   // Toggle Admin Status
   const handleToggleAdminStatus = async (admin) => {
-    if (admin.role === 'primary_admin' || admin.mobile?.endsWith('7339041622')) {
+    if (admin.role === 'primary_admin' || admin.id === 'adm-primary-01') {
       alert('The Primary Administrator account cannot be deactivated.');
       return;
     }
@@ -212,7 +211,7 @@ export const UserAccessView = ({
 
   // Open Delete Confirmation Modal
   const handleOpenDeleteModal = (admin) => {
-    if (admin.role === 'primary_admin' || admin.mobile?.endsWith('7339041622')) {
+    if (admin.role === 'primary_admin' || admin.id === 'adm-primary-01') {
       alert('The Primary Administrator account cannot be deleted.');
       return;
     }
@@ -425,7 +424,7 @@ export const UserAccessView = ({
             ) : (
               admins.map(admin => {
                 const isSelf = admin.id === currentUser?.id || admin.mobile?.endsWith(currentUser?.mobile?.replace(/^\+91/, '') || 'xxx');
-                const isPrimary = admin.role === 'primary_admin' || admin.mobile?.endsWith('7339041622');
+                const isPrimary = admin.role === 'primary_admin' || admin.id === 'adm-primary-01';
 
                 return (
                   <div key={admin.id} className="p-4 space-y-3 bg-white">
@@ -578,7 +577,7 @@ export const UserAccessView = ({
                 ) : (
                   admins.map(admin => {
                     const isSelf = admin.id === currentUser?.id || admin.mobile?.endsWith(currentUser?.mobile?.replace(/^\+91/, '') || 'xxx');
-                    const isPrimary = admin.role === 'primary_admin' || admin.mobile?.endsWith('7339041622');
+                    const isPrimary = admin.role === 'primary_admin' || admin.id === 'adm-primary-01';
 
                     return (
                       <tr key={admin.id} className="hover:bg-slate-50/70 transition-colors">

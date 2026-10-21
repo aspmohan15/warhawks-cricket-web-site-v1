@@ -26,21 +26,6 @@ CREATE TABLE IF NOT EXISTS public.admin_otp_codes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Seed primary administrator account if not present
-INSERT INTO public.administrators (id, name, mobile, email, password_hash, role, is_active)
-VALUES (
-  'adm-primary-01',
-  'Warhawks Primary Operations Chief',
-  '+917339041622',
-  'operations@warhawks.org',
-  encode(digest('warhawks2026whk_salt_2026', 'sha256'), 'hex'),
-  'primary_admin',
-  true
-)
-ON CONFLICT (mobile) DO UPDATE SET
-  is_active = true,
-  role = 'primary_admin';
-
 -- 2. RPC: request_admin_otp
 CREATE OR REPLACE FUNCTION public.request_admin_otp(p_mobile text)
 RETURNS jsonb
@@ -71,15 +56,15 @@ BEGIN
     AND is_active = true
   LIMIT 1;
 
-  -- Auto-seed primary admin if requested
-  IF v_admin.id IS NULL AND (v_clean = '+917339041622' OR v_clean LIKE '%7339041622') THEN
+  -- Auto-seed primary admin if no primary admin exists in administrators table
+  IF v_admin.id IS NULL AND NOT EXISTS (SELECT 1 FROM public.administrators WHERE role = 'primary_admin') THEN
     INSERT INTO public.administrators (id, name, mobile, email, password_hash, role, is_active)
     VALUES (
       'adm-primary-01',
       'Warhawks Primary Operations Chief',
-      '+917339041622',
+      v_clean,
       'operations@warhawks.org',
-      encode(digest('warhawks2026whk_salt_2026', 'sha256'), 'hex'),
+      encode(gen_random_bytes(32), 'hex'),
       'primary_admin',
       true
     )
@@ -169,7 +154,7 @@ BEGIN
 
   DELETE FROM public.admin_otp_codes WHERE mobile = v_clean;
 
-  v_is_primary := (v_admin.role = 'primary_admin' OR v_clean = '+917339041622' OR v_clean LIKE '%7339041622');
+  v_is_primary := (v_admin.role = 'primary_admin');
 
   RETURN jsonb_build_object(
     'success', true,

@@ -23,12 +23,6 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
 });
 
-// Official Primary & Default Organizer Credentials
-const PRIMARY_ADMIN_MOBILE = '+917339041622';
-const DEFAULT_ORGANIZER_MOBILE = '+91 7339041622';
-const DEFAULT_ORGANIZER_PASSWORD = process.env.DEFAULT_ORGANIZER_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || '';
-const SERVER_AUTH_SECRET = process.env.ORGANIZER_AUTH_SECRET || crypto.randomBytes(32).toString('hex');
-
 // Helper to normalize Indian mobile numbers
 const normalizeMobile = (input: string | undefined): string => {
   if (!input) return '';
@@ -38,6 +32,11 @@ const normalizeMobile = (input: string | undefined): string => {
   if (/^\+91[6-9]\d{9}$/.test(cleaned)) return cleaned;
   return cleaned;
 };
+
+// Official Primary Administrator Configuration (Read from secure environment)
+const PRIMARY_ADMIN_MOBILE = process.env.PRIMARY_ADMIN_MOBILE ? normalizeMobile(process.env.PRIMARY_ADMIN_MOBILE) : '';
+const DEFAULT_ORGANIZER_PASSWORD = process.env.DEFAULT_ORGANIZER_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || '';
+const SERVER_AUTH_SECRET = process.env.ORGANIZER_AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 
 // Generate HMAC signed token for organizer session
 const signOrganizerToken = (mobile: string): string => {
@@ -117,7 +116,7 @@ const requirePrimaryAdmin = async (req: Request, res: Response, next: NextFuncti
     );
 
     const admin = adminRes.rows[0];
-    const isPrimary = admin?.role === 'primary_admin' || cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622');
+    const isPrimary = admin?.role === 'primary_admin' || Boolean(PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE);
 
     if (!isPrimary) {
       return res.status(403).json({
@@ -154,8 +153,11 @@ app.post('/api/auth/request-otp', async (req: Request, res: Response) => {
 
     let admin = adminRes.rows[0];
 
-    // If primary admin mobile 7339041622 is requested but not seeded yet, auto-provision
-    if (!admin && (cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622'))) {
+    // Auto-seed primary admin if requested mobile matches configured PRIMARY_ADMIN_MOBILE or database has no primary admin
+    const hasPrimaryRes = await pool.query(`SELECT 1 FROM public.administrators WHERE role = 'primary_admin' LIMIT 1;`);
+    const hasPrimaryAdmin = (hasPrimaryRes.rows.length > 0);
+
+    if (!admin && (!hasPrimaryAdmin || (PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE))) {
       const salt = 'whk_salt_2026';
       const initialSeed = DEFAULT_ORGANIZER_PASSWORD || crypto.randomBytes(16).toString('hex');
       const hash = crypto.createHash('sha256').update(initialSeed + salt).digest('hex');
@@ -164,7 +166,7 @@ app.post('/api/auth/request-otp', async (req: Request, res: Response) => {
          VALUES ('adm-primary-01', 'Warhawks Primary Operations Chief', $1, 'operations@warhawks.org', $2, 'primary_admin', true)
          ON CONFLICT (mobile) DO UPDATE SET is_active = true, role = 'primary_admin'
          RETURNING id, name, mobile, role, is_active;`,
-        [PRIMARY_ADMIN_MOBILE, hash]
+        [cleanMobile, hash]
       );
       admin = ins.rows[0];
     }
@@ -251,7 +253,7 @@ app.post('/api/auth/verify-otp', async (req: Request, res: Response) => {
     // Clear used code
     await pool.query(`DELETE FROM public.admin_otp_codes WHERE mobile = $1;`, [cleanMobile]);
 
-    const isPrimary = admin.role === 'primary_admin' || cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622');
+    const isPrimary = admin.role === 'primary_admin' || Boolean(PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE);
 
     return res.json({
       success: true,
@@ -442,7 +444,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   let admin = adminRes.rows[0];
 
   // Auto-seed primary admin if needed and initial password configured in env
-  if (!admin && (cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622')) && DEFAULT_ORGANIZER_PASSWORD) {
+  if (!admin && PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE && DEFAULT_ORGANIZER_PASSWORD) {
     const salt = 'whk_salt_2026';
     const initialHash = crypto.createHash('sha256').update(DEFAULT_ORGANIZER_PASSWORD + salt).digest('hex');
     try {
@@ -451,7 +453,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
          VALUES ('adm-primary-01', 'Warhawks Primary Operations Chief', $1, 'operations@warhawks.org', $2, 'primary_admin', true)
          ON CONFLICT (mobile) DO UPDATE SET is_active = true, role = 'primary_admin'
          RETURNING id, name, mobile, email, password_hash, role, is_active;`,
-        [PRIMARY_ADMIN_MOBILE, initialHash]
+        [cleanMobile, initialHash]
       );
       admin = ins.rows[0];
     } catch {}
@@ -472,7 +474,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   }
 
   const token = signOrganizerToken(cleanMobile);
-  const isPrimary = admin.role === 'primary_admin' || cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622');
+  const isPrimary = admin.role === 'primary_admin' || Boolean(PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE);
 
   try {
     await pool.query(
@@ -539,14 +541,15 @@ app.post('/api/auth/change-password', requireOrganizer, async (req: Request, res
     );
 
     let admin = adminRes.rows[0];
-    if (!admin && (cleanMobile === PRIMARY_ADMIN_MOBILE || cleanMobile.endsWith('7339041622'))) {
+    if (!admin && PRIMARY_ADMIN_MOBILE && cleanMobile === PRIMARY_ADMIN_MOBILE && DEFAULT_ORGANIZER_PASSWORD) {
       const salt = 'whk_salt_2026';
       const initialHash = crypto.createHash('sha256').update(DEFAULT_ORGANIZER_PASSWORD + salt).digest('hex');
       const ins = await pool.query(
         `INSERT INTO public.administrators (id, name, mobile, email, password_hash, role, is_active)
          VALUES ('adm-primary-01', 'Warhawks Primary Operations Chief', $1, 'operations@warhawks.org', $2, 'primary_admin', true)
+         ON CONFLICT (mobile) DO UPDATE SET is_active = true, role = 'primary_admin'
          RETURNING id, name, mobile, password_hash;`,
-        [PRIMARY_ADMIN_MOBILE, initialHash]
+        [cleanMobile, initialHash]
       );
       admin = ins.rows[0];
     }
