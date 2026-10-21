@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar,
   Plus,
@@ -12,14 +12,45 @@ import {
   AlertCircle,
   ExternalLink,
   Settings,
-  RefreshCw,
   Radio,
-  Tv
+  Tv,
+  BarChart3
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { WARHAWKS_LOGO_URL } from '../../constants';
 
 const DEFAULT_CRICHEROES_URL = 'https://cricheroes.com/tournament/1999506/warhawk-tournament-s04/matches/live-matches';
+
+const getCricHeroesLinks = (url) => {
+  try {
+    const match = url?.match(/cricheroes\.com\/tournament\/([0-9]+)\/([^\/?#]+)/i);
+    if (match) {
+      const tourId = match[1];
+      const tourSlug = match[2];
+      const base = `https://cricheroes.com/tournament/${tourId}/${tourSlug}`;
+      return {
+        tournamentId: tourId,
+        tournamentSlug: tourSlug,
+        base,
+        live: `${base}/matches/live-matches`,
+        upcoming: `${base}/matches/upcoming-matches`,
+        past: `${base}/matches/past-matches`,
+        pointsTable: `${base}/points-table`,
+        leaderboard: `${base}/leaderboard`
+      };
+    }
+  } catch {}
+  return {
+    tournamentId: '1999506',
+    tournamentSlug: 'warhawk-tournament-s04',
+    base: url || DEFAULT_CRICHEROES_URL,
+    live: url || DEFAULT_CRICHEROES_URL,
+    upcoming: url || DEFAULT_CRICHEROES_URL,
+    past: url || DEFAULT_CRICHEROES_URL,
+    pointsTable: url || DEFAULT_CRICHEROES_URL,
+    leaderboard: url || DEFAULT_CRICHEROES_URL
+  };
+};
 
 export const FixturesResultsView = ({
   tournament,
@@ -47,7 +78,7 @@ export const FixturesResultsView = ({
   });
   const [configUrlModalOpen, setConfigUrlModalOpen] = useState(false);
   const [tempUrl, setTempUrl] = useState(liveUrl);
-  const [iframeKey, setIframeKey] = useState(Date.now());
+  const cricLinks = useMemo(() => getCricHeroesLinks(liveUrl), [liveUrl]);
   const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
@@ -70,7 +101,6 @@ export const FixturesResultsView = ({
       localStorage.setItem(`warhawks_cricheroes_url_${tournament?.id}`, clean);
       localStorage.setItem('warhawks_cricheroes_url', clean);
     } catch {}
-    setIframeKey(Date.now());
     setConfigUrlModalOpen(false);
   };
 
@@ -216,23 +246,23 @@ export const FixturesResultsView = ({
         </div>
       </div>
 
-      {/* Embedded CricHeroes Live Match Center */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {/* Widget Header Bar */}
-        <div className="px-4 py-3 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800">
+      {/* Official CricHeroes Tournament Match Center */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+        {/* Match Center Header Bar */}
+        <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="relative flex h-3 w-3 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
             </span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5">
                   <Tv className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>CricHeroes Live Match Center & Scores</span>
+                  <span>CricHeroes Live Match Center</span>
                 </h2>
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                  Live Feed
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Live Engine
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 truncate mt-0.5 font-mono">
@@ -241,7 +271,7 @@ export const FixturesResultsView = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center flex-wrap">
             {isOrganizer && (
               <button
                 type="button"
@@ -249,28 +279,19 @@ export const FixturesResultsView = ({
                   setTempUrl(liveUrl);
                   setConfigUrlModalOpen(true);
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
-                title="Configure CricHeroes live feed URL"
+                className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+                title="Configure CricHeroes tournament URL"
               >
                 <Settings className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Configure URL</span>
+                <span>Configure URL</span>
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={() => setIframeKey(Date.now())}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-              title="Refresh match frame"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
 
             <a
               href={liveUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors shadow-xs"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs hover:shadow-sm"
             >
               <span>Open in CricHeroes</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -278,35 +299,169 @@ export const FixturesResultsView = ({
           </div>
         </div>
 
-        {/* Security / Fallback Notice Banner */}
-        <div className="bg-amber-50/90 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-amber-600 shrink-0" />
-            <span className="text-[11px] sm:text-xs">
-              Live scorecards are powered by CricHeroes. If CricHeroes prevents direct frame display due to browser security policies, click to open directly:
-            </span>
-          </div>
-          <a
-            href={liveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 text-[11px] sm:text-xs text-amber-950 font-bold underline hover:text-amber-800 flex items-center gap-1"
-          >
-            Launch CricHeroes Live ↗
-          </a>
-        </div>
+        {/* Match Center Body */}
+        <div className="p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 bg-gradient-to-b from-slate-50/70 to-white">
+          {/* Featured Match Center Hero Banner */}
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white p-4 sm:p-6 lg:p-7 border border-slate-800 shadow-sm">
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
+              <div className="space-y-1.5 sm:space-y-2 max-w-xl">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    Official Tournament Portal
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    ID #{cricLinks.tournamentId}
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-black tracking-tight text-white">
+                  Warhawk Tournament S04 — Match Center
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Real-time ball-by-ball updates, wagon wheels, over summaries, and official tournament scorecards powered by CricHeroes.
+                </p>
+              </div>
 
-        {/* Responsive Iframe Container */}
-        <div className="relative w-full h-[520px] sm:h-[620px] lg:h-[720px] bg-slate-100">
-          <iframe
-            key={iframeKey}
-            src={liveUrl}
-            title="Warhawks CricHeroes Tournament Matches & Scores"
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-            loading="lazy"
-          />
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 shrink-0">
+                <a
+                  href={liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
+                >
+                  <Radio className="w-4 h-4 text-slate-950 animate-pulse" />
+                  <span>Launch Live Matches ↗</span>
+                </a>
+                <a
+                  href={cricLinks.base}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm border border-slate-700 transition-colors"
+                >
+                  <span>Tournament Overview</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Access Action Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Card 1: Live Matches */}
+            <a
+              href={cricLinks.live}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-rose-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
+            >
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 sm:p-2.5 rounded-lg bg-rose-50 text-rose-600 group-hover:bg-rose-100 transition-colors">
+                    <Radio className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
+                    LIVE
+                  </span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-rose-600 transition-colors">
+                  Live Matches & Scores
+                </h4>
+                <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+                  Real-time ball-by-ball scoring, current run rate, commentary & live match scorecards.
+                </p>
+              </div>
+              <div className="text-[11px] sm:text-xs font-semibold text-rose-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <span>Open Live Feed</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </div>
+            </a>
+
+            {/* Card 2: Upcoming Fixtures */}
+            <a
+              href={cricLinks.upcoming}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
+            >
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 sm:p-2.5 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 transition-colors">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                    SCHEDULE
+                  </span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
+                  Upcoming Fixtures
+                </h4>
+                <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+                  Match schedule, ground allocations, dates, and tournament match timings.
+                </p>
+              </div>
+              <div className="text-[11px] sm:text-xs font-semibold text-emerald-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <span>View Schedule</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </div>
+            </a>
+
+            {/* Card 3: Past Matches & Results */}
+            <a
+              href={cricLinks.past}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
+            >
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 sm:p-2.5 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-100 transition-colors">
+                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                    RESULTS
+                  </span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
+                  Match Results & Recaps
+                </h4>
+                <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+                  Completed match scorecards, Player of the Match awards & comprehensive summaries.
+                </p>
+              </div>
+              <div className="text-[11px] sm:text-xs font-semibold text-amber-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <span>View Results</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </div>
+            </a>
+
+            {/* Card 4: Points Table & Stats */}
+            <a
+              href={cricLinks.pointsTable}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
+            >
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 sm:p-2.5 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
+                    <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
+                    STANDINGS
+                  </span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  Points Table & Stats
+                </h4>
+                <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+                  Group standings, Net Run Rate (NRR), top run scorers & leading wicket takers.
+                </p>
+              </div>
+              <div className="text-[11px] sm:text-xs font-semibold text-blue-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <span>View Standings</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </div>
+            </a>
+          </div>
         </div>
       </div>
 
