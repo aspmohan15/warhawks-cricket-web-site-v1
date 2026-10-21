@@ -667,6 +667,7 @@ class TournamentDatabase {
       ...data,
       id: data.id || `exp-${Date.now().toString(36)}`,
       amount: Number(data.amount) || 0,
+      advanceAmount: Number(data.advanceAmount) || 0,
       createdAt: new Date().toISOString()
     };
     this.schema.expenses.push(newExpense);

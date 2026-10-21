@@ -29,7 +29,7 @@ export const SponsorshipView = ({
     name: '',
     contactNumber: '',
     contactEmail: '',
-    contributionAmount: 2500000,
+    contributionAmount: '',
     isActive: true,
     displayOnPublicWeb: true
   });
@@ -40,12 +40,20 @@ export const SponsorshipView = ({
       setCreateModalOpen(false);
       return;
     }
+
+    const rawAmount = String(form.contributionAmount).trim();
+    if (rawAmount === '' || isNaN(Number(rawAmount)) || Number(rawAmount) < 0) {
+      alert('Please enter a valid non-negative financial commitment amount (₹).');
+      return;
+    }
+    const cleanAmount = Number(rawAmount);
+
     onCreateSponsor({
       tournamentId: tournament?.id || '',
       name: form.name.trim(),
       contactNumber: form.contactNumber.trim(),
       contactEmail: form.contactEmail?.trim() || '',
-      contributionAmount: parseInt(form.contributionAmount, 10) || 0,
+      contributionAmount: cleanAmount,
       isActive: form.isActive,
       displayOnPublicWeb: form.displayOnPublicWeb
     });
@@ -94,7 +102,7 @@ export const SponsorshipView = ({
                 name: '',
                 contactNumber: '',
                 contactEmail: '',
-                contributionAmount: 2000000,
+                contributionAmount: '',
                 isActive: true,
                 displayOnPublicWeb: true
               });
@@ -269,12 +277,14 @@ export const SponsorshipView = ({
               <input
                 type="number"
                 required
-                min={0}
-                step={50000}
+                min="0"
+                step="any"
+                placeholder="Enter commitment (e.g. 50000)"
                 value={form.contributionAmount}
-                onChange={e => setForm({ ...form, contributionAmount: parseInt(e.target.value, 10) || 0 })}
+                onChange={e => setForm({ ...form, contributionAmount: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
+              <p className="text-[10px] text-slate-400 mt-0.5">Accepts ₹0 or any non-negative amount</p>
             </div>
 
             <div className="sm:col-span-2">
@@ -331,7 +341,12 @@ export const SponsorshipView = ({
           <form
             onSubmit={e => {
               e.preventDefault();
-              onUpdateSponsor(editingSponsor.id, editingSponsor);
+              const rawAmount = String(editingSponsor.contributionAmount).trim();
+              const cleanAmount = rawAmount === '' ? 0 : Math.max(0, Number(rawAmount) || 0);
+              onUpdateSponsor(editingSponsor.id, {
+                ...editingSponsor,
+                contributionAmount: cleanAmount
+              });
               setEditingSponsor(null);
             }}
             className="space-y-4 text-xs"
@@ -367,10 +382,11 @@ export const SponsorshipView = ({
                 <label className="block font-semibold text-slate-700 mb-1">Financial Commitment (₹)</label>
                 <input
                   type="number"
-                  min={0}
-                  step={50000}
-                  value={editingSponsor.contributionAmount || 0}
-                  onChange={e => setEditingSponsor({ ...editingSponsor, contributionAmount: parseInt(e.target.value, 10) || 0 })}
+                  min="0"
+                  step="any"
+                  placeholder="0"
+                  value={editingSponsor.contributionAmount ?? ''}
+                  onChange={e => setEditingSponsor({ ...editingSponsor, contributionAmount: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                 />
               </div>

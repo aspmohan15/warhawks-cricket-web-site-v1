@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Plus,
@@ -7,13 +7,19 @@ import {
   Trophy,
   Edit,
   Trash2,
-  FileSpreadsheet,
   CheckCircle,
   PlayCircle,
-  AlertCircle
+  AlertCircle,
+  ExternalLink,
+  Settings,
+  RefreshCw,
+  Radio,
+  Tv
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { WARHAWKS_LOGO_URL } from '../../constants';
+
+const DEFAULT_CRICHEROES_URL = 'https://cricheroes.com/tournament/1999506/warhawk-tournament-s04/matches/live-matches';
 
 export const FixturesResultsView = ({
   tournament,
@@ -24,13 +30,49 @@ export const FixturesResultsView = ({
   onCreateMatch,
   onUpdateMatch,
   onDeleteMatch,
-  onOpenImport,
   onNavigateToEditions
 }) => {
   const isOrganizer = currentUser?.role === 'organizer';
   const [filterStatus, setFilterStatus] = useState('all');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [scoringMatch, setScoringMatch] = useState(null);
+
+  // CricHeroes Live URL State
+  const [liveUrl, setLiveUrl] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`warhawks_cricheroes_url_${tournament?.id}`) || localStorage.getItem('warhawks_cricheroes_url');
+      if (stored) return stored;
+    } catch {}
+    return DEFAULT_CRICHEROES_URL;
+  });
+  const [configUrlModalOpen, setConfigUrlModalOpen] = useState(false);
+  const [tempUrl, setTempUrl] = useState(liveUrl);
+  const [iframeKey, setIframeKey] = useState(Date.now());
+  const [activeTab, setActiveTab] = useState('all');
+
+  useEffect(() => {
+    if (tournament?.id) {
+      try {
+        const stored = localStorage.getItem(`warhawks_cricheroes_url_${tournament?.id}`) || localStorage.getItem('warhawks_cricheroes_url');
+        if (stored) {
+          setLiveUrl(stored);
+          setTempUrl(stored);
+        }
+      } catch {}
+    }
+  }, [tournament?.id]);
+
+  const handleSaveLiveUrl = (e) => {
+    e.preventDefault();
+    const clean = tempUrl.trim() || DEFAULT_CRICHEROES_URL;
+    setLiveUrl(clean);
+    try {
+      localStorage.setItem(`warhawks_cricheroes_url_${tournament?.id}`, clean);
+      localStorage.setItem('warhawks_cricheroes_url', clean);
+    } catch {}
+    setIframeKey(Date.now());
+    setConfigUrlModalOpen(false);
+  };
 
   // New Match Form State
   const [matchForm, setMatchForm] = useState({
@@ -124,11 +166,15 @@ export const FixturesResultsView = ({
           {isOrganizer ? (
             <>
               <button
-                onClick={onOpenImport}
+                type="button"
+                onClick={() => {
+                  setTempUrl(liveUrl);
+                  setConfigUrlModalOpen(true);
+                }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-purple-600" />
-                <span>Import CricHeroes CSV</span>
+                <Settings className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Configure Live Feed</span>
               </button>
               <button
                 onClick={() => {
@@ -151,10 +197,116 @@ export const FixturesResultsView = ({
               </button>
             </>
           ) : (
-            <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">
-              🏏 Player View · Live Certified Fixtures
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Live CricHeroes Match Center</span>
+              </span>
+              <a
+                href={liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors"
+              >
+                <span>Open Portal</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           )}
+        </div>
+      </div>
+
+      {/* Embedded CricHeroes Live Match Center */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        {/* Widget Header Bar */}
+        <div className="px-4 py-3 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+                  <Tv className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>CricHeroes Live Match Center & Scores</span>
+                </h2>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                  Live Feed
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 truncate mt-0.5 font-mono">
+                {liveUrl}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            {isOrganizer && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTempUrl(liveUrl);
+                  setConfigUrlModalOpen(true);
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+                title="Configure CricHeroes live feed URL"
+              >
+                <Settings className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Configure URL</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIframeKey(Date.now())}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+              title="Refresh match frame"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+
+            <a
+              href={liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors shadow-xs"
+            >
+              <span>Open in CricHeroes</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+
+        {/* Security / Fallback Notice Banner */}
+        <div className="bg-amber-50/90 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-[11px] sm:text-xs">
+              Live scorecards are powered by CricHeroes. If CricHeroes prevents direct frame display due to browser security policies, click to open directly:
+            </span>
+          </div>
+          <a
+            href={liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-[11px] sm:text-xs text-amber-950 font-bold underline hover:text-amber-800 flex items-center gap-1"
+          >
+            Launch CricHeroes Live ↗
+          </a>
+        </div>
+
+        {/* Responsive Iframe Container */}
+        <div className="relative w-full h-[520px] sm:h-[620px] lg:h-[720px] bg-slate-100">
+          <iframe
+            key={iframeKey}
+            src={liveUrl}
+            title="Warhawks CricHeroes Tournament Matches & Scores"
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            loading="lazy"
+          />
         </div>
       </div>
 
@@ -617,6 +769,65 @@ export const FixturesResultsView = ({
           </div>
         </form>
       </Modal>
+      )}
+
+      {/* Configure CricHeroes URL Modal (Organizer Exclusive) */}
+      {configUrlModalOpen && (
+        <Modal
+          isOpen={true}
+          onClose={() => setConfigUrlModalOpen(false)}
+          title="Configure CricHeroes Live URL"
+          subtitle="Set the CricHeroes live match center URL displayed to all tournament organizers and players"
+        >
+          <form onSubmit={handleSaveLiveUrl} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                CricHeroes Live Matches URL <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="url"
+                required
+                placeholder="https://cricheroes.com/tournament/..."
+                value={tempUrl}
+                onChange={e => setTempUrl(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Paste any valid CricHeroes live match URL, tournament page, or live scoreboard link.
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+              <span className="text-[11px] font-bold text-slate-700 block">Default Official URL:</span>
+              <p className="text-[11px] font-mono text-slate-600 break-all select-all">
+                {DEFAULT_CRICHEROES_URL}
+              </p>
+              <button
+                type="button"
+                onClick={() => setTempUrl(DEFAULT_CRICHEROES_URL)}
+                className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold cursor-pointer underline mt-1"
+              >
+                Reset to Default Season 4 URL
+              </button>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setConfigUrlModalOpen(false)}
+                className="px-3.5 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs cursor-pointer"
+              >
+                Save Live Feed URL
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

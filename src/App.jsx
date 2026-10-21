@@ -220,8 +220,7 @@ export default function App() {
       'registrations',
       'teams_players',
       'auction',
-      'rules_videos',
-      'user_access'
+      'rules_videos'
     ];
     if (role === 'player' && !playerAllowedSections.includes(currentSection)) {
       setCurrentSection('fixtures_results');
@@ -636,7 +635,7 @@ export default function App() {
         {/* Viewport Content Canvas */}
         <main className="flex-1 px-3 py-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0">
           {currentUser.role === 'player' &&
-          !['fixtures_results', 'standings', 'registrations', 'teams_players', 'auction', 'rules_videos', 'user_access'].includes(currentSection) ? (
+          !['fixtures_results', 'standings', 'registrations', 'teams_players', 'auction', 'rules_videos'].includes(currentSection) ? (
             <div className="bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center max-w-xl mx-auto shadow-xs my-8">
               <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl mx-auto mb-4 font-bold shadow-xs">
                 🔒
@@ -718,7 +717,6 @@ export default function App() {
                   onCreateMatch={handleCreateMatch}
                   onUpdateMatch={handleUpdateMatch}
                   onDeleteMatch={handleDeleteMatch}
-                  onOpenImport={() => setCurrentSection('import_history')}
                   onNavigateToEditions={() => setCurrentSection('editions')}
                 />
               )}

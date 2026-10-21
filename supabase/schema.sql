@@ -420,6 +420,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
   title TEXT NOT NULL,
   category TEXT NOT NULL,
   amount NUMERIC(14, 2) NOT NULL,
+  advance_amount NUMERIC(14, 2) NOT NULL DEFAULT 0,
   date DATE NOT NULL,
   vendor_name TEXT NOT NULL,
   receipt_url TEXT,

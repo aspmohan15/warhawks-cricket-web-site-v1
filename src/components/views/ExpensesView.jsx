@@ -29,7 +29,8 @@ export const ExpensesView = ({
   const [form, setForm] = useState({
     title: '',
     category: 'Ground & Pitch',
-    amount: 50000,
+    amount: '',
+    advanceAmount: '',
     date: new Date().toISOString().split('T')[0],
     vendorName: '',
     paymentMode: 'Bank Transfer',
@@ -44,16 +45,36 @@ export const ExpensesView = ({
       setCreateModalOpen(false);
       return;
     }
+
+    const rawTotal = String(form.amount).trim();
+    if (rawTotal === '' || isNaN(Number(rawTotal)) || Number(rawTotal) <= 0) {
+      alert('Please enter a valid total expense amount (₹).');
+      return;
+    }
+    const totalAmount = Number(rawTotal);
+
+    const rawAdvance = String(form.advanceAmount).trim();
+    const advance = rawAdvance === '' ? 0 : Number(rawAdvance);
+    if (isNaN(advance) || advance < 0) {
+      alert('Advance amount cannot be negative.');
+      return;
+    }
+    if (advance > totalAmount) {
+      alert('Advance amount cannot exceed the total expense voucher amount.');
+      return;
+    }
+
     onCreateExpense({
       tournamentId: tournament?.id || '',
-      title: form.title,
+      title: form.title.trim(),
       category: form.category,
-      amount: form.amount,
+      amount: totalAmount,
+      advanceAmount: advance,
       date: form.date,
-      vendorName: form.vendorName,
+      vendorName: form.vendorName.trim(),
       paymentMode: form.paymentMode,
       paymentStatus: form.paymentStatus,
-      notes: form.notes,
+      notes: form.notes?.trim() || '',
       receiptUrl: form.receiptUrl || undefined
     });
     setCreateModalOpen(false);
@@ -63,7 +84,9 @@ export const ExpensesView = ({
     const rows = expenses.map(e => ({
       Title: e.title,
       Category: e.category,
-      Amount: e.amount,
+      'Total Amount (₹)': e.amount,
+      'Advance Amount (₹)': e.advanceAmount || 0,
+      'Balance Due (₹)': Math.max(0, (e.amount || 0) - (e.advanceAmount || 0)),
       Date: e.date,
       Vendor: e.vendorName,
       PaymentMode: e.paymentMode,
@@ -73,7 +96,9 @@ export const ExpensesView = ({
     exportToCsv(`${(tournament?.name || 'Tournament').replace(/\s+/g, '_')}_Expense_Ledger`, rows);
   };
 
-  const totalExpenseSum = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenseSum = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const totalAdvanceSum = expenses.reduce((sum, e) => sum + (Number(e.advanceAmount) || 0), 0);
+  const totalBalanceDue = Math.max(0, totalExpenseSum - totalAdvanceSum);
   const categoriesList = EXPENSE_CATEGORIES;
 
   const categoryTotals = categoriesList.map(cat => {
@@ -141,7 +166,8 @@ export const ExpensesView = ({
               setForm({
                 title: '',
                 category: 'Ground & Pitch',
-                amount: 75000,
+                amount: '',
+                advanceAmount: '',
                 date: new Date().toISOString().split('T')[0],
                 vendorName: '',
                 paymentMode: 'Bank Transfer',
@@ -160,9 +186,9 @@ export const ExpensesView = ({
       </div>
 
       {/* Financial Overview Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-          <span className="text-xs font-medium text-slate-500">Total Disbursements</span>
+          <span className="text-xs font-medium text-slate-500">Total Expenses</span>
           <div className="mt-2 flex flex-wrap items-baseline gap-2">
             <span className="text-2xl font-bold font-mono text-slate-900">
               ₹{totalExpenseSum.toLocaleString()}
@@ -174,13 +200,25 @@ export const ExpensesView = ({
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-          <span className="text-xs font-medium text-slate-500">Largest Category</span>
-          <div className="mt-2">
-            <span className="text-base font-bold text-slate-900 truncate block">
-              {categoryTotals[0]?.category || 'None'}
+          <span className="text-xs font-medium text-slate-500">Advance Paid</span>
+          <div className="mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="text-2xl font-bold font-mono text-emerald-700">
+              ₹{totalAdvanceSum.toLocaleString()}
             </span>
-            <span className="text-xs text-slate-400 font-mono">
-              ₹{categoryTotals[0]?.total.toLocaleString() || 0} ({categoryTotals[0]?.percent.toFixed(1) || 0}%)
+            <span className="text-xs font-mono text-slate-400">
+              disbursed
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <span className="text-xs font-medium text-slate-500">Balance Outstanding</span>
+          <div className="mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="text-2xl font-bold font-mono text-amber-700">
+              ₹{totalBalanceDue.toLocaleString()}
+            </span>
+            <span className="text-xs font-mono text-slate-400">
+              pending
             </span>
           </div>
         </div>
@@ -188,7 +226,7 @@ export const ExpensesView = ({
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
           <span className="text-xs font-medium text-slate-500">Vouchers Paid / Pending</span>
           <div className="mt-2 flex items-baseline gap-3">
-            <span className="text-2xl font-bold font-mono text-emerald-700">
+            <span className="text-xl font-bold font-mono text-emerald-700">
               {expenses.filter(e => e.paymentStatus === 'paid').length} Paid
             </span>
             <span className="text-xs font-mono text-amber-700 font-semibold">
@@ -275,6 +313,11 @@ export const ExpensesView = ({
                   <div className="font-mono font-bold text-slate-900 text-sm">
                     ₹{expense.amount.toLocaleString()}
                   </div>
+                  {Number(expense.advanceAmount) > 0 && (
+                    <div className="text-[10px] font-mono text-emerald-700 font-semibold">
+                      Adv: ₹{Number(expense.advanceAmount).toLocaleString()}
+                    </div>
+                  )}
                   <span className={`text-[10px] font-semibold capitalize ${
                     expense.paymentStatus === 'paid' ? 'text-emerald-700' : 'text-amber-700'
                   }`}>
@@ -319,14 +362,16 @@ export const ExpensesView = ({
                 <th className="py-3 px-4">Vendor</th>
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Payment</th>
-                <th className="py-3 px-4 text-right">Amount (₹)</th>
+                <th className="py-3 px-4 text-right">Total (₹)</th>
+                <th className="py-3 px-4 text-right">Advance (₹)</th>
+                <th className="py-3 px-4 text-right">Balance (₹)</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredExpenses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-slate-400">
+                  <td colSpan={9} className="text-center py-8 text-slate-400">
                     {expenses.length === 0 ? 'No expense vouchers recorded yet.' : 'No expenses found matching filter.'}
                   </td>
                 </tr>
@@ -364,6 +409,18 @@ export const ExpensesView = ({
 
                   <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900 text-sm">
                     ₹{expense.amount.toLocaleString()}
+                  </td>
+
+                  <td className="py-3.5 px-4 text-right font-mono text-emerald-700 font-semibold text-xs">
+                    {Number(expense.advanceAmount) > 0 ? (
+                      `₹${Number(expense.advanceAmount).toLocaleString()}`
+                    ) : (
+                      <span className="text-slate-400 font-normal">₹0</span>
+                    )}
+                  </td>
+
+                  <td className="py-3.5 px-4 text-right font-mono text-amber-800 font-semibold text-xs">
+                    ₹{Math.max(0, expense.amount - (Number(expense.advanceAmount) || 0)).toLocaleString()}
                   </td>
 
                   <td className="py-3.5 px-4 text-right">

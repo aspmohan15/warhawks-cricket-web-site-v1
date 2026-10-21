@@ -64,8 +64,7 @@ export const Sidebar = ({
         { id: 'registrations', label: 'Tournament Registration', icon: UserPlus, badge: 'Apply' },
         { id: 'teams_players', label: 'Teams & Squads', icon: Users },
         { id: 'auction', label: 'Auction Live Viewer', icon: Gavel, badge: 'Live' },
-        { id: 'rules_videos', label: 'Rules & Demo Videos', icon: BookOpenCheck },
-        { id: 'user_access', label: 'User & Access RBAC', icon: ShieldCheck, badge: '2-Role' }
+        { id: 'rules_videos', label: 'Rules & Demo Videos', icon: BookOpenCheck }
       ];
 
   const handleNavClick = (id) => {
