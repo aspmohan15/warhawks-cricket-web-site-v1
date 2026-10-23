@@ -136,17 +136,10 @@ export const StandingsView = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100 font-sans">
+              <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 font-sans">
                 <span className="text-slate-400">
                   Runs: {row.runsScored}/{row.oversFaced}ov · Conceded: {row.runsConceded}/{row.oversBowled}ov
                 </span>
-                {isTop4 ? (
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded shrink-0">
-                    Playoffs <ArrowUpRight className="w-2.5 h-2.5" />
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-slate-400 font-medium shrink-0">Eliminated</span>
-                )}
               </div>
             </div>
           );

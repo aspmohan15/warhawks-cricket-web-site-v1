@@ -139,37 +139,34 @@ export const TopBar = ({
             </span>
           </span>
           <span className="text-slate-300 shrink-0 hidden md:inline">/</span>
-          <span className="text-slate-900 font-bold sm:font-semibold truncate max-w-[75px] xs:max-w-[105px] sm:max-w-[160px] md:max-w-[220px]">
+          <span className="text-slate-900 font-bold sm:font-semibold truncate max-w-[120px] xs:max-w-[190px] sm:max-w-[260px] md:max-w-[360px]">
             <span className="sm:hidden">{sectionTitles[currentSection] || 'Admin'}</span>
             <span className="hidden sm:inline">{sectionFullTitles[currentSection] || 'Admin Console'}</span>
           </span>
         </div>
       </div>
 
-      {/* Center Zone: Active Tournament Edition Switcher (Dynamically shrinkable) */}
-      <div className="relative mx-1 sm:mx-2 min-w-0 flex-1 max-w-[110px] xs:max-w-[150px] sm:max-w-xs md:max-w-sm lg:max-w-md">
+      {/* Center Zone: Active Tournament Edition Switcher (Dynamically shrinkable with ellipsis) */}
+      <div className="relative mx-1 sm:mx-2.5 min-w-0 flex-1 max-w-[220px] xs:max-w-[280px] sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
         <button
           onClick={() => {
             setEditionDropdownOpen(!editionDropdownOpen);
             setRoleDropdownOpen(false);
             setQuickActionOpen(false);
           }}
-          className="w-full flex items-center justify-between gap-1 sm:gap-1.5 px-1.5 xs:px-2 sm:px-3 py-1.5 min-h-[36px] sm:min-h-[38px] rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-all text-xs font-semibold text-slate-800 cursor-pointer min-w-0 shadow-2xs"
+          className="w-full flex items-center justify-between gap-1.5 px-2 sm:px-3 py-1.5 min-h-[36px] sm:min-h-[38px] rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-all text-xs font-semibold text-slate-800 cursor-pointer min-w-0 shadow-2xs"
           aria-label="Switch Tournament Edition"
-          title="Switch active tournament edition"
+          title={activeTournament ? `Ed. ${activeTournament.editionNumber}: ${activeTournament.name}` : 'Switch active tournament edition'}
         >
-          <div className="flex items-center gap-1 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <Trophy className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span className="truncate text-left flex-1 min-w-0">
-              {activeTournament ? (
-                <>
-                  <span className="sm:hidden font-mono">Ed. {activeTournament.editionNumber}</span>
-                  <span className="hidden sm:inline">Ed. {activeTournament.editionNumber}: {activeTournament.name}</span>
-                </>
-              ) : (tournaments.length > 0 ? 'Select' : 'None')}
+            <span className="truncate text-left flex-1 min-w-0 block font-medium">
+              {activeTournament
+                ? `Ed. ${activeTournament.editionNumber}: ${activeTournament.name}`
+                : (tournaments.length > 0 ? 'Select Tournament' : 'No Tournaments')}
             </span>
           </div>
-          <ChevronDown className={`w-3 h-3 text-slate-500 shrink-0 transition-transform duration-150 ${editionDropdownOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-3.5 h-3.5 text-slate-500 shrink-0 transition-transform duration-150 ${editionDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {editionDropdownOpen && (
@@ -329,6 +326,16 @@ export const TopBar = ({
                     <BadgePercent className="w-4 h-4 text-emerald-500 shrink-0" />
                     <span>View Sponsors & Partners</span>
                   </button>
+                  <button
+                    onClick={() => {
+                      onOpenOrganizerLogin();
+                      setQuickActionOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2.5 flex items-center gap-2 hover:bg-emerald-50 text-emerald-800 font-semibold border-t border-slate-100 cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Organizer Sign In</span>
+                  </button>
                 </>
               )}
             </div>
@@ -430,22 +437,7 @@ export const TopBar = ({
               </div>
             )}
           </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold border border-slate-200">
-              <Globe className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Public Visitor Portal</span>
-            </span>
-
-            <button
-              onClick={onOpenOrganizerLogin}
-              className="flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Organizer Sign In</span>
-            </button>
-          </div>
-        )}
+        ) : null}
       </div>
     </header>
   );
