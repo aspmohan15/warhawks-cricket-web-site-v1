@@ -1092,7 +1092,195 @@ app.patch('/api/registrations/:id', requireOrganizer, async (req: Request, res: 
 });
 
 // ==============================================================================
-// 6. HEALTH & STATUS ENDPOINT
+// 6. TOURNAMENT ANNOUNCEMENTS API (Public Reader + Organizer CRUD & Reorder)
+// ==============================================================================
+const mapAnnouncementRow = (row: any) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  message: row.message,
+  displayOrder: Number(row.display_order) || 0,
+  isActive: Boolean(row.is_active),
+  createdBy: row.created_by,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
+app.get('/api/announcements', async (req: Request, res: Response) => {
+  try {
+    const { tournamentId, all } = req.query;
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : (req.headers['x-organizer-token'] as string);
+    const isOrganizer = verifyOrganizerToken(token);
+
+    let query = '';
+    const params: any[] = [];
+
+    if (isOrganizer || all === 'true') {
+      if (tournamentId) {
+        query = 'SELECT * FROM public.announcements WHERE tournament_id = $1 OR tournament_id IS NULL ORDER BY display_order ASC, created_at ASC;';
+        params.push(tournamentId);
+      } else {
+        query = 'SELECT * FROM public.announcements ORDER BY display_order ASC, created_at ASC;';
+      }
+    } else {
+      if (tournamentId) {
+        query = 'SELECT * FROM public.announcements WHERE is_active = true AND (tournament_id = $1 OR tournament_id IS NULL) ORDER BY display_order ASC, created_at ASC;';
+        params.push(tournamentId);
+      } else {
+        query = 'SELECT * FROM public.announcements WHERE is_active = true ORDER BY display_order ASC, created_at ASC;';
+      }
+    }
+
+    const result = await pool.query(query, params);
+    return res.json(result.rows.map(mapAnnouncementRow));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/announcements', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { tournamentId, message, displayOrder, isActive } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Announcement message cannot be empty.' });
+    }
+
+    let order = displayOrder;
+    if (order === undefined || order === null) {
+      const maxRes = await pool.query('SELECT COALESCE(MAX(display_order), -1) + 1 AS next_order FROM public.announcements;');
+      order = maxRes.rows[0]?.next_order ?? 0;
+    }
+
+    const id = req.body.id || `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const query = `
+      INSERT INTO public.announcements (id, tournament_id, message, display_order, is_active, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const values = [
+      id,
+      tournamentId || null,
+      message.trim(),
+      order,
+      isActive !== undefined ? Boolean(isActive) : true,
+      'Warhawks Operations'
+    ];
+
+    const result = await pool.query(query, values);
+    return res.status(201).json(mapAnnouncementRow(result.rows[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/announcements/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { message, isActive, displayOrder, tournamentId } = req.body;
+
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (message !== undefined) {
+      if (!message.trim()) return res.status(400).json({ error: 'Message cannot be empty.' });
+      setClauses.push(`message = $${idx}`);
+      values.push(message.trim());
+      idx++;
+    }
+    if (isActive !== undefined) {
+      setClauses.push(`is_active = $${idx}`);
+      values.push(Boolean(isActive));
+      idx++;
+    }
+    if (displayOrder !== undefined) {
+      setClauses.push(`display_order = $${idx}`);
+      values.push(Number(displayOrder));
+      idx++;
+    }
+    if (tournamentId !== undefined) {
+      setClauses.push(`tournament_id = $${idx}`);
+      values.push(tournamentId || null);
+      idx++;
+    }
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({ error: 'No fields to update.' });
+    }
+
+    setClauses.push(`updated_at = timezone('utc'::text, now())`);
+    values.push(id);
+    const query = `UPDATE public.announcements SET ${setClauses.join(', ')} WHERE id = $${idx} RETURNING *;`;
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Announcement not found.' });
+    }
+    return res.json(mapAnnouncementRow(result.rows[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/announcements/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM public.announcements WHERE id = $1;', [id]);
+    return res.json({ success: true, id });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/announcements/swap', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id1, id2 } = req.body;
+    if (!id1 || !id2) {
+      return res.status(400).json({ error: 'Both id1 and id2 are required to swap announcements.' });
+    }
+
+    const res1 = await pool.query('SELECT id, display_order FROM public.announcements WHERE id = $1::text LIMIT 1;', [String(id1)]);
+    const res2 = await pool.query('SELECT id, display_order FROM public.announcements WHERE id = $1::text LIMIT 1;', [String(id2)]);
+
+    if (res1.rows.length === 0 || res2.rows.length === 0) {
+      return res.status(404).json({ error: 'One or both announcements not found.' });
+    }
+
+    const order1 = Number(res1.rows[0].display_order);
+    const order2 = Number(res2.rows[0].display_order);
+
+    await pool.query('UPDATE public.announcements SET display_order = $1::int, updated_at = timezone(\'utc\'::text, now()) WHERE id = $2::text;', [order2, String(id1)]);
+    await pool.query('UPDATE public.announcements SET display_order = $1::int, updated_at = timezone(\'utc\'::text, now()) WHERE id = $2::text;', [order1, String(id2)]);
+
+    const updatedRes = await pool.query('SELECT * FROM public.announcements ORDER BY display_order ASC, created_at ASC;');
+    return res.json({ success: true, items: updatedRes.rows.map(mapAnnouncementRow) });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/announcements/reorder', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'items array is required for reordering.' });
+    }
+
+    for (const item of items) {
+      await pool.query(
+        'UPDATE public.announcements SET display_order = $1::int, updated_at = timezone(\'utc\'::text, now()) WHERE id = $2::text;',
+        [Number(item.displayOrder), String(item.id)]
+      );
+    }
+
+    const updatedRes = await pool.query('SELECT * FROM public.announcements ORDER BY display_order ASC, created_at ASC;');
+    return res.json({ success: true, items: updatedRes.rows.map(mapAnnouncementRow) });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================================================================
+// 7. HEALTH & STATUS ENDPOINT
 // ==============================================================================
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
@@ -1111,6 +1299,25 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 // 7. VITE DEV MIDDLEWARE / STATIC PRODUCTION SERVING
 // ==============================================================================
 async function startServer() {
+  // Ensure announcements table exists in PostgreSQL
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS public.announcements (
+        id TEXT PRIMARY KEY,
+        tournament_id TEXT,
+        message TEXT NOT NULL,
+        display_order INTEGER NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+      );
+      CREATE INDEX IF NOT EXISTS idx_announcements_order ON public.announcements(display_order ASC, created_at ASC);
+    `);
+  } catch (err: any) {
+    console.warn('[Announcements Table Init]:', err.message);
+  }
+
   if (!isProd) {
     // Mount Vite dev middleware in development
     const vite = await createViteServer({

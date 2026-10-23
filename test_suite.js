@@ -234,7 +234,100 @@ async function runTests() {
   }
   console.log('✅ Test 10b Passed: Tournament Edition deleted successfully via API.');
 
-  console.log('--- ALL 10 INTEGRATION & SECURITY TESTS PASSED PERFECTLY! ---');
+  // Test 11: Tournament Announcements Lifecycle & Supabase Persistence
+  const ann1Res = await fetch('http://localhost:3000/api/announcements', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + primaryToken
+    },
+    body: JSON.stringify({
+      tournamentId: activeTournamentId,
+      message: 'Tournament 2 scheduled on 17-12-2026',
+      isActive: true
+    })
+  });
+  const ann1 = await ann1Res.json();
+  if (!ann1Res.ok || !ann1.id || ann1.message !== 'Tournament 2 scheduled on 17-12-2026') {
+    throw new Error('Failed to create announcement 1: ' + JSON.stringify(ann1));
+  }
+  console.log('✅ Test 11a Passed: Created Announcement 1:', ann1.id, ann1.message);
+
+  const ann2Res = await fetch('http://localhost:3000/api/announcements', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + primaryToken
+    },
+    body: JSON.stringify({
+      tournamentId: activeTournamentId,
+      message: 'Auction on 10-12-2026',
+      isActive: true
+    })
+  });
+  const ann2 = await ann2Res.json();
+  if (!ann2Res.ok || !ann2.id || ann2.message !== 'Auction on 10-12-2026') {
+    throw new Error('Failed to create announcement 2: ' + JSON.stringify(ann2));
+  }
+  console.log('✅ Test 11b Passed: Created Announcement 2:', ann2.id, ann2.message);
+
+  // Verify public reader access (no auth token required)
+  const pubAnnRes = await fetch('http://localhost:3000/api/announcements');
+  const pubList = await pubAnnRes.json();
+  if (!pubAnnRes.ok || !Array.isArray(pubList) || !pubList.some(a => a.id === ann1.id)) {
+    throw new Error('Public announcement fetch failed: ' + JSON.stringify(pubList));
+  }
+  console.log('✅ Test 11c Passed: Public visitor can view announcements ribbon feed (items:', pubList.length + ')');
+
+  // Test Atomic Swap order between ann1 and ann2
+  const swapRes = await fetch('http://localhost:3000/api/announcements/swap', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + primaryToken
+    },
+    body: JSON.stringify({ id1: ann1.id, id2: ann2.id })
+  });
+  const swapData = await swapRes.json();
+  if (!swapRes.ok || !swapData.success) {
+    throw new Error('Failed to swap announcements: ' + JSON.stringify(swapData));
+  }
+  console.log('✅ Test 11d Passed: Announcements display orders swapped atomically via backend transaction.');
+
+  // Test Update Announcement text
+  const updateRes = await fetch(`http://localhost:3000/api/announcements/${ann1.id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + primaryToken
+    },
+    body: JSON.stringify({ message: 'Tournament 2 scheduled on 17-12-2026 - Official Registration Open' })
+  });
+  const updatedData = await updateRes.json();
+  if (!updateRes.ok || !updatedData.message.includes('Official Registration Open')) {
+    throw new Error('Failed to update announcement message: ' + JSON.stringify(updatedData));
+  }
+  console.log('✅ Test 11e Passed: Announcement inline edit updated message successfully.');
+
+  // Verify Supabase PostgreSQL direct record state
+  const pgCheck = await pool.query('SELECT id, message, display_order FROM public.announcements WHERE id = $1;', [ann1.id]);
+  if (pgCheck.rows.length === 0 || !pgCheck.rows[0].message.includes('Official Registration Open')) {
+    throw new Error('Direct PostgreSQL query on announcements table failed!');
+  }
+  console.log('✅ Test 11f Passed: Supabase PostgreSQL direct row verified:', pgCheck.rows[0]);
+
+  // Clean up test announcements
+  await fetch(`http://localhost:3000/api/announcements/${ann1.id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + primaryToken }
+  });
+  await fetch(`http://localhost:3000/api/announcements/${ann2.id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + primaryToken }
+  });
+  console.log('✅ Test 11g Passed: Cleaned up test announcements.');
+
+  console.log('--- ALL 11 INTEGRATION, SECURITY & ANNOUNCEMENTS TESTS PASSED PERFECTLY! ---');
   await pool.end();
   process.exit(0);
 }

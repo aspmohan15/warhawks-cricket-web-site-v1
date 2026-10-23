@@ -293,6 +293,17 @@ const mapAuctionBidFromDb = (row) => ({
   timestamp: row.timestamp
 });
 
+const mapAnnouncementFromDb = (row) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  message: row.message,
+  displayOrder: Number(row.display_order ?? 0),
+  isActive: Boolean(row.is_active),
+  createdBy: row.created_by,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
 export const supabaseDb = {
   // Tournaments
   async getTournaments() {
@@ -1109,5 +1120,162 @@ export const supabaseDb = {
     const { data, error } = await client.from('auction_bids').insert([row]).select().single();
     if (error) throw error;
     return mapAuctionBidFromDb(data);
+  },
+
+  // Announcements
+  async getAnnouncements(tournamentId = null, activeOnly = false) {
+    try {
+      const params = new URLSearchParams();
+      if (tournamentId) params.append('tournamentId', tournamentId);
+      if (activeOnly) params.append('activeOnly', 'true');
+      const res = await fetch(`/api/announcements?${params.toString()}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn('API getAnnouncements notice:', err.message);
+    }
+
+    const client = getSupabaseClient();
+    if (!client) return [];
+    try {
+      let query = client.from('announcements').select('*').order('display_order', { ascending: true }).order('created_at', { ascending: true });
+      if (tournamentId) query = query.eq('tournament_id', tournamentId);
+      if (activeOnly) query = query.eq('is_active', true);
+      const { data, error } = await query;
+      if (error) {
+        console.warn('Supabase client getAnnouncements error:', error.message);
+        return [];
+      }
+      return (data || []).map(mapAnnouncementFromDb);
+    } catch {
+      return [];
+    }
+  },
+
+  async createAnnouncement(ann) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+    try {
+      const res = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(ann)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Failed to create announcement');
+    } catch (err) {
+      const client = getSupabaseClient();
+      if (client) {
+        const row = {
+          id: ann.id || `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          tournament_id: ann.tournamentId || null,
+          message: ann.message.trim(),
+          display_order: ann.displayOrder ?? 0,
+          is_active: ann.isActive ?? true,
+          created_by: 'Warhawks Operations'
+        };
+        const { data, error } = await client.from('announcements').insert([row]).select().single();
+        if (error) throw error;
+        return mapAnnouncementFromDb(data);
+      }
+      throw err;
+    }
+  },
+
+  async updateAnnouncement(id, updates) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+    try {
+      const res = await fetch(`/api/announcements/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Failed to update announcement');
+    } catch (err) {
+      const client = getSupabaseClient();
+      if (client) {
+        const row = { updated_at: new Date().toISOString() };
+        if (updates.message !== undefined) row.message = updates.message.trim();
+        if (updates.isActive !== undefined) row.is_active = updates.isActive;
+        if (updates.displayOrder !== undefined) row.display_order = updates.displayOrder;
+        const { data, error } = await client.from('announcements').update(row).eq('id', id).select().single();
+        if (error) throw error;
+        return mapAnnouncementFromDb(data);
+      }
+      throw err;
+    }
+  },
+
+  async deleteAnnouncement(id) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+    const res = await fetch(`/api/announcements/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+    if (!res.ok) {
+      const client = getSupabaseClient();
+      if (client) {
+        const { error } = await client.from('announcements').delete().eq('id', id);
+        if (error) throw error;
+        return { success: true, id };
+      }
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Failed to delete announcement');
+    }
+    return await res.json();
+  },
+
+  async swapAnnouncements(id1, id2) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+    const res = await fetch('/api/announcements/swap', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ id1, id2 })
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Failed to swap announcements');
+    }
+    return await res.json();
+  },
+
+  async reorderAnnouncements(items) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+    const res = await fetch('/api/announcements/reorder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ items })
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Failed to reorder announcements');
+    }
+    return await res.json();
   }
 };

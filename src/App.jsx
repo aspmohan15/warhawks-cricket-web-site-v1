@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from './services/db';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
+import { AnnouncementRibbon } from './components/layout/AnnouncementRibbon';
 import { ToastContainer } from './components/common/Toast';
 
 // Views
@@ -88,6 +89,7 @@ export default function App() {
   const [mediaAssets, setMediaAssets] = useState([]);
   const [importJobs, setImportJobs] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [announcements, setAnnouncements] = useState(() => db.getAnnouncements(activeTournamentId));
   const [settings, setSettings] = useState(() => db.getSettings());
 
   const refreshTournamentData = (tId) => {
@@ -117,6 +119,7 @@ export default function App() {
       setMediaAssets([]);
       setImportJobs([]);
       setAuditLogs([]);
+      setAnnouncements(db.getAnnouncements(null));
       setSettings(db.getSettings());
       return;
     }
@@ -134,6 +137,7 @@ export default function App() {
     setMediaAssets(db.getMediaAssets(resolvedId));
     setImportJobs(db.getImportJobs(resolvedId));
     setAuditLogs(db.getAuditLogs(resolvedId));
+    setAnnouncements(db.getAnnouncements(resolvedId));
     setSettings(db.getSettings());
   };
 
@@ -553,6 +557,57 @@ export default function App() {
     showToast('Media asset removed', 'info');
   };
 
+  // Tournament Announcements Handlers
+  const handleCreateAnnouncement = async (data) => {
+    try {
+      const created = await db.createAnnouncement({
+        ...data,
+        tournamentId: activeTournamentId
+      });
+      setAnnouncements(db.getAnnouncements(activeTournamentId));
+      showToast('Announcement posted on player ribbon!', 'success');
+      return created;
+    } catch (err) {
+      showToast(err.message || 'Failed to create announcement', 'error');
+      throw err;
+    }
+  };
+
+  const handleUpdateAnnouncement = async (id, updates) => {
+    try {
+      const updated = await db.updateAnnouncement(id, updates);
+      setAnnouncements(db.getAnnouncements(activeTournamentId));
+      showToast('Announcement updated', 'success');
+      return updated;
+    } catch (err) {
+      showToast(err.message || 'Failed to update announcement', 'error');
+      throw err;
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    try {
+      await db.deleteAnnouncement(id);
+      setAnnouncements(db.getAnnouncements(activeTournamentId));
+      showToast('Announcement removed', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to delete announcement', 'error');
+      throw err;
+    }
+  };
+
+  const handleSwapAnnouncements = async (id1, id2) => {
+    try {
+      const swapped = await db.swapAnnouncements(id1, id2);
+      setAnnouncements(db.getAnnouncements(activeTournamentId));
+      showToast('Announcement order updated', 'info');
+      return swapped;
+    } catch (err) {
+      showToast(err.message || 'Failed to reorder announcements', 'error');
+      throw err;
+    }
+  };
+
   // Imports
   const handleImportMatches = (importedMatches, fileTitle) => {
     importedMatches.forEach(m => db.createMatch(m));
@@ -636,6 +691,9 @@ export default function App() {
           isDbConnected={isDbConnected}
         />
 
+        {/* Player View: Continuous scrolling marquee/ribbon directly below the header */}
+        <AnnouncementRibbon announcements={announcements} />
+
         {/* Viewport Content Canvas */}
         <main className="flex-1 px-3 py-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0">
           {currentUser.role === 'player' &&
@@ -676,6 +734,11 @@ export default function App() {
                   expenses={expenses}
                   auditLogs={auditLogs}
                   registrations={registrations}
+                  announcements={announcements}
+                  onCreateAnnouncement={handleCreateAnnouncement}
+                  onUpdateAnnouncement={handleUpdateAnnouncement}
+                  onDeleteAnnouncement={handleDeleteAnnouncement}
+                  onSwapAnnouncements={handleSwapAnnouncements}
                   onNavigate={setCurrentSection}
                   onQuickAction={handleQuickAction}
                 />

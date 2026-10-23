@@ -16,6 +16,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS, WARHAWKS_LOGO_URL } from '../../constants';
+import { AnnouncementsManager } from '../dashboard/AnnouncementsManager';
 
 export const DashboardView = ({
   tournament,
@@ -26,6 +27,11 @@ export const DashboardView = ({
   expenses,
   auditLogs,
   registrations,
+  announcements = [],
+  onCreateAnnouncement,
+  onUpdateAnnouncement,
+  onDeleteAnnouncement,
+  onSwapAnnouncements,
   onNavigate,
   onQuickAction
 }) => {
@@ -237,6 +243,16 @@ export const DashboardView = ({
           );
         })}
       </div>
+
+      {/* Tournament Announcements Manager (To-Do list style for player ribbon) */}
+      <AnnouncementsManager
+        announcements={announcements}
+        onCreateAnnouncement={onCreateAnnouncement}
+        onUpdateAnnouncement={onUpdateAnnouncement}
+        onDeleteAnnouncement={onDeleteAnnouncement}
+        onSwapAnnouncements={onSwapAnnouncements}
+        tournamentId={tournament?.id}
+      />
 
       {/* Two Column Layout: Fixtures & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-w-0">

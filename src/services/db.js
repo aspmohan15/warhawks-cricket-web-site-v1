@@ -67,6 +67,7 @@ class TournamentDatabase {
       mediaAssets: [],
       importJobs: [],
       auditLogs: [],
+      announcements: [],
       users: initialUsers,
       settings: initialSettings
     };
@@ -94,6 +95,7 @@ class TournamentDatabase {
           mediaAssets: Array.isArray(parsed.mediaAssets) ? parsed.mediaAssets : [],
           importJobs: Array.isArray(parsed.importJobs) ? parsed.importJobs : [],
           auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
+          announcements: Array.isArray(parsed.announcements) ? parsed.announcements : [],
           users: initialUsers,
           settings: { ...initialSettings, ...(parsed.settings || {}) }
         };
@@ -123,11 +125,17 @@ class TournamentDatabase {
   async initSupabaseSync() {
     if (!isSupabaseConfigured()) return;
     try {
-      const remoteTournaments = await supabaseDb.getTournaments();
+      const [remoteTournaments, remoteAnnouncements] = await Promise.all([
+        supabaseDb.getTournaments().catch(() => null),
+        supabaseDb.getAnnouncements().catch(() => null)
+      ]);
       if (remoteTournaments !== null) {
         this.schema.tournaments = remoteTournaments;
-        this.saveToStorage();
       }
+      if (remoteAnnouncements !== null) {
+        this.schema.announcements = remoteAnnouncements;
+      }
+      this.saveToStorage();
     } catch (err) {
       console.warn('Supabase initial fetch notice:', err.message);
     }
@@ -136,7 +144,7 @@ class TournamentDatabase {
   async syncTournamentData(tournamentId) {
     if (!isSupabaseConfigured() || !tournamentId) return;
     try {
-      const [remoteTournaments, remoteTeams, remotePlayers, remoteMatches, remoteSponsors, remoteRegistrations, remoteExpenses, remoteRules, remoteAuctionConfig, remoteAuctionBids] = await Promise.all([
+      const [remoteTournaments, remoteTeams, remotePlayers, remoteMatches, remoteSponsors, remoteRegistrations, remoteExpenses, remoteRules, remoteAuctionConfig, remoteAuctionBids, remoteAnnouncements] = await Promise.all([
         supabaseDb.getTournaments().catch(() => null),
         supabaseDb.getTeams(tournamentId).catch(() => null),
         supabaseDb.getPlayers(tournamentId).catch(() => null),
@@ -146,7 +154,8 @@ class TournamentDatabase {
         supabaseDb.getExpenses(tournamentId).catch(() => null),
         supabaseDb.getRules(tournamentId).catch(() => null),
         supabaseDb.getAuctionConfig(tournamentId).catch(() => null),
-        supabaseDb.getAuctionBids(tournamentId).catch(() => null)
+        supabaseDb.getAuctionBids(tournamentId).catch(() => null),
+        supabaseDb.getAnnouncements(tournamentId).catch(() => null)
       ]);
 
       if (remoteTournaments !== null) this.schema.tournaments = remoteTournaments;
@@ -184,6 +193,10 @@ class TournamentDatabase {
       if (remoteAuctionBids !== null) {
         const others = this.schema.auctionBids.filter(b => b.tournamentId !== tournamentId);
         this.schema.auctionBids = [...others, ...remoteAuctionBids];
+      }
+      if (remoteAnnouncements !== null) {
+        const others = (this.schema.announcements || []).filter(a => a.tournamentId && a.tournamentId !== tournamentId);
+        this.schema.announcements = [...others, ...remoteAnnouncements];
       }
 
       this.saveToStorage();
@@ -652,6 +665,127 @@ class TournamentDatabase {
     if (isSupabaseConfigured()) {
       supabaseDb.deleteSponsor(id).catch(err => console.warn('Supabase deleteSponsor notice:', err.message));
     }
+  }
+
+  // ==========================================
+  // TOURNAMENT ANNOUNCEMENTS CRUD & REORDERING
+  // ==========================================
+  getAnnouncements(tournamentId, activeOnly = false) {
+    let list = [...(this.schema.announcements || [])];
+    if (tournamentId) {
+      list = list.filter(a => !a.tournamentId || a.tournamentId === tournamentId);
+    }
+    if (activeOnly) {
+      list = list.filter(a => a.isActive !== false);
+    }
+    return list.sort((a, b) => (Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0)) || (new Date(a.createdAt || 0) - new Date(b.createdAt || 0)));
+  }
+
+  async createAnnouncement(data) {
+    const list = this.getAnnouncements(data.tournamentId);
+    const maxOrder = list.length > 0 ? Math.max(...list.map(a => Number(a.displayOrder ?? 0))) + 1 : 0;
+    const newAnn = {
+      id: data.id || `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      tournamentId: data.tournamentId || null,
+      message: (data.message || '').trim(),
+      displayOrder: data.displayOrder !== undefined ? Number(data.displayOrder) : maxOrder,
+      isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+      createdBy: 'Warhawks Operations',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    let persisted = newAnn;
+    try {
+      const res = await supabaseDb.createAnnouncement(newAnn);
+      if (res) persisted = res;
+    } catch (err) {
+      console.warn('createAnnouncement notice:', err.message);
+    }
+
+    const idx = (this.schema.announcements || []).findIndex(a => a.id === persisted.id);
+    if (idx >= 0) {
+      this.schema.announcements[idx] = persisted;
+    } else {
+      this.schema.announcements = [...(this.schema.announcements || []), persisted];
+    }
+    this.saveToStorage();
+    return persisted;
+  }
+
+  async updateAnnouncement(id, updates) {
+    let persisted = null;
+    try {
+      persisted = await supabaseDb.updateAnnouncement(id, updates);
+    } catch (err) {
+      console.warn('updateAnnouncement notice:', err.message);
+    }
+
+    const idx = (this.schema.announcements || []).findIndex(a => a.id === id);
+    if (idx !== -1) {
+      this.schema.announcements[idx] = persisted || {
+        ...this.schema.announcements[idx],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      this.saveToStorage();
+      return this.schema.announcements[idx];
+    }
+    return persisted;
+  }
+
+  async deleteAnnouncement(id) {
+    try {
+      await supabaseDb.deleteAnnouncement(id);
+    } catch (err) {
+      console.warn('deleteAnnouncement notice:', err.message);
+    }
+    this.schema.announcements = (this.schema.announcements || []).filter(a => a.id !== id);
+    this.saveToStorage();
+    return { success: true, id };
+  }
+
+  async swapAnnouncements(id1, id2) {
+    try {
+      const res = await supabaseDb.swapAnnouncements(id1, id2);
+      if (res?.items) {
+        this.schema.announcements = res.items;
+        this.saveToStorage();
+        return res.items;
+      }
+    } catch (err) {
+      console.warn('swapAnnouncements notice:', err.message);
+    }
+
+    const item1 = (this.schema.announcements || []).find(a => a.id === id1);
+    const item2 = (this.schema.announcements || []).find(a => a.id === id2);
+    if (item1 && item2) {
+      const tempOrder = item1.displayOrder;
+      item1.displayOrder = item2.displayOrder;
+      item2.displayOrder = tempOrder;
+      this.saveToStorage();
+    }
+    return this.getAnnouncements();
+  }
+
+  async reorderAnnouncements(items) {
+    try {
+      const res = await supabaseDb.reorderAnnouncements(items);
+      if (res?.items) {
+        this.schema.announcements = res.items;
+        this.saveToStorage();
+        return res.items;
+      }
+    } catch (err) {
+      console.warn('reorderAnnouncements notice:', err.message);
+    }
+
+    items.forEach(({ id, displayOrder }) => {
+      const match = (this.schema.announcements || []).find(a => a.id === id);
+      if (match) match.displayOrder = Number(displayOrder);
+    });
+    this.saveToStorage();
+    return this.getAnnouncements();
   }
 
   // ==========================================
