@@ -99,6 +99,10 @@ async function runTests() {
   }
   console.log('✅ Test 6 Passed: Non-primary admin correctly forbidden (403) from creating administrators.');
 
+  // Get an active tournament ID
+  const tournQuery = await pool.query("SELECT id FROM public.tournaments LIMIT 1;");
+  const activeTournamentId = tournQuery.rows[0]?.id;
+
   // Test 7: Team Creation Without Home City and Owner Name
   const teamRes = await fetch('http://localhost:3000/api/teams', {
     method: 'POST',
@@ -107,7 +111,7 @@ async function runTests() {
       'Authorization': 'Bearer ' + primaryToken
     },
     body: JSON.stringify({
-      tournamentId: 'tour-ed2-mvfakkwf',
+      tournamentId: activeTournamentId,
       name: 'Auto Test Phoenix',
       shortCode: 'ATP',
       primaryColor: '#e11d48',
@@ -134,7 +138,7 @@ async function runTests() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       id: testRegId,
-      tournamentId: 'tour-ed2-mvfakkwf',
+      tournamentId: activeTournamentId,
       fullName: 'Test Athlete MultiGuest',
       email: 'athlete.guest.test@gmail.com',
       phone: '+91 98765 11111',

@@ -74,6 +74,8 @@ const mapPlayerFromDb = (row) => ({
   soldPrice: row.sold_price ? Number(row.sold_price) : null,
   auctionStatus: row.auction_status,
   isCaptain: Boolean(row.is_captain),
+  isViceCaptain: Boolean(row.is_vice_captain),
+  isWicketKeeper: Boolean(row.is_wicket_keeper),
   isOverseas: Boolean(row.is_overseas),
   email: row.email,
   phone: row.phone,
@@ -601,6 +603,8 @@ export const supabaseDb = {
       sold_price: p.soldPrice || null,
       auction_status: p.auctionStatus || 'available',
       is_captain: Boolean(p.isCaptain),
+      is_vice_captain: Boolean(p.isViceCaptain),
+      is_wicket_keeper: Boolean(p.isWicketKeeper),
       is_overseas: Boolean(p.isOverseas),
       email: p.email,
       phone: p.phone,
@@ -662,6 +666,8 @@ export const supabaseDb = {
     if (updates.soldPrice !== undefined) row.sold_price = updates.soldPrice;
     if (updates.auctionStatus !== undefined) row.auction_status = updates.auctionStatus;
     if (updates.isCaptain !== undefined) row.is_captain = updates.isCaptain;
+    if (updates.isViceCaptain !== undefined) row.is_vice_captain = updates.isViceCaptain;
+    if (updates.isWicketKeeper !== undefined) row.is_wicket_keeper = updates.isWicketKeeper;
     if (updates.isOverseas !== undefined) row.is_overseas = updates.isOverseas;
     if (updates.city !== undefined) row.city = updates.city;
     if (updates.foodPreference !== undefined) row.food_preference = updates.foodPreference;

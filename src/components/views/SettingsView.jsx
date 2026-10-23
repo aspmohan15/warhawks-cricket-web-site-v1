@@ -38,7 +38,7 @@ export const SettingsView = ({
     supabaseAnonKey: settings.supabaseAnonKey || currentSupabase.anonKey || '',
     upiQrCodeUrl: tournament?.upiQrCodeUrl || settings.upiQrCodeUrl || DEFAULT_WARHAWKS_UPI.defaultQrCodeUrl,
     upiId: tournament?.upiId || settings.upiId || DEFAULT_WARHAWKS_UPI.upiId,
-    registrationFee: tournament?.registrationFee || settings.registrationFee || 1500
+    registrationFee: tournament?.registrationFee ?? settings.registrationFee ?? 1500
   });
 
   const [organizerCreds, setOrganizerCreds] = useState(() => getStoredOrganizerCredentials());
@@ -61,7 +61,16 @@ export const SettingsView = ({
 
   const handleSave = (e) => {
     e.preventDefault();
-    onUpdateSettings(form);
+    const rawFee = String(form.registrationFee ?? '').trim();
+    if (rawFee !== '' && (isNaN(Number(rawFee)) || Number(rawFee) < 0)) {
+      alert('Registration fee must be a valid non-negative amount (₹).');
+      return;
+    }
+    const cleanSettings = {
+      ...form,
+      registrationFee: rawFee === '' ? 0 : Number(rawFee)
+    };
+    onUpdateSettings(cleanSettings);
 
     // Save organizer credentials
     updateOrganizerCredentials({
@@ -375,9 +384,9 @@ export const SettingsView = ({
                   <input
                     type="number"
                     min={0}
-                    step={50}
-                    value={form.registrationFee || 1500}
-                    onChange={e => setForm({ ...form, registrationFee: Number(e.target.value) || 0 })}
+                    step="any"
+                    value={form.registrationFee ?? ''}
+                    onChange={e => setForm({ ...form, registrationFee: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
                   />
                 </div>

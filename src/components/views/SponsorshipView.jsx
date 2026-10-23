@@ -41,12 +41,12 @@ export const SponsorshipView = ({
       return;
     }
 
-    const rawAmount = String(form.contributionAmount).trim();
-    if (rawAmount === '' || isNaN(Number(rawAmount)) || Number(rawAmount) < 0) {
+    const rawAmount = String(form.contributionAmount ?? '').trim();
+    if (rawAmount !== '' && (isNaN(Number(rawAmount)) || Number(rawAmount) < 0)) {
       alert('Please enter a valid non-negative financial commitment amount (₹).');
       return;
     }
-    const cleanAmount = Number(rawAmount);
+    const cleanAmount = rawAmount === '' ? 0 : Math.max(0, Number(rawAmount) || 0);
 
     onCreateSponsor({
       tournamentId: tournament?.id || '',
@@ -56,6 +56,14 @@ export const SponsorshipView = ({
       contributionAmount: cleanAmount,
       isActive: form.isActive,
       displayOnPublicWeb: form.displayOnPublicWeb
+    });
+    setForm({
+      name: '',
+      contactNumber: '',
+      contactEmail: '',
+      contributionAmount: '',
+      isActive: true,
+      displayOnPublicWeb: true
     });
     setCreateModalOpen(false);
   };
@@ -276,13 +284,12 @@ export const SponsorshipView = ({
               </label>
               <input
                 type="number"
-                required
                 min="0"
                 step="any"
-                placeholder="Enter commitment (e.g. 50000)"
-                value={form.contributionAmount}
+                placeholder="0"
+                value={form.contributionAmount ?? ''}
                 onChange={e => setForm({ ...form, contributionAmount: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
               />
               <p className="text-[10px] text-slate-400 mt-0.5">Accepts ₹0 or any non-negative amount</p>
             </div>

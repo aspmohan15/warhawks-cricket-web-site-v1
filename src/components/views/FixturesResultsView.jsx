@@ -22,6 +22,7 @@ import { WARHAWKS_LOGO_URL } from '../../constants';
 const DEFAULT_CRICHEROES_URL = 'https://cricheroes.com/tournament/1999506/warhawk-tournament-s04/matches/live-matches';
 
 const getCricHeroesLinks = (url) => {
+  const defaultBase = 'https://cricheroes.com/tournament/1999506/warhawk-tournament-s04';
   try {
     const match = url?.match(/cricheroes\.com\/tournament\/([0-9]+)\/([^\/?#]+)/i);
     if (match) {
@@ -35,7 +36,7 @@ const getCricHeroesLinks = (url) => {
         live: `${base}/matches/live-matches`,
         upcoming: `${base}/matches/upcoming-matches`,
         past: `${base}/matches/past-matches`,
-        pointsTable: `${base}/points-table`,
+        pointsTable: `${base}/point-table`,
         leaderboard: `${base}/leaderboard`
       };
     }
@@ -43,12 +44,12 @@ const getCricHeroesLinks = (url) => {
   return {
     tournamentId: '1999506',
     tournamentSlug: 'warhawk-tournament-s04',
-    base: url || DEFAULT_CRICHEROES_URL,
-    live: url || DEFAULT_CRICHEROES_URL,
-    upcoming: url || DEFAULT_CRICHEROES_URL,
-    past: url || DEFAULT_CRICHEROES_URL,
-    pointsTable: url || DEFAULT_CRICHEROES_URL,
-    leaderboard: url || DEFAULT_CRICHEROES_URL
+    base: defaultBase,
+    live: `${defaultBase}/matches/live-matches`,
+    upcoming: `${defaultBase}/matches/upcoming-matches`,
+    past: `${defaultBase}/matches/past-matches`,
+    pointsTable: `${defaultBase}/point-table`,
+    leaderboard: `${defaultBase}/leaderboard`
   };
 };
 
@@ -124,11 +125,17 @@ export const FixturesResultsView = ({
       return;
     }
     if (matchForm.teamAId === matchForm.teamBId) {
+      alert('Team A and Team B cannot be the same franchise.');
+      return;
+    }
+    const rawMatchNum = String(matchForm.matchNumber ?? '').trim();
+    if (rawMatchNum === '' || isNaN(Number(rawMatchNum)) || Number(rawMatchNum) < 1) {
+      alert('Please enter a valid match number (1 or greater).');
       return;
     }
     onCreateMatch({
       tournamentId: tournament?.id || '',
-      matchNumber: matchForm.matchNumber,
+      matchNumber: Number(rawMatchNum),
       round: matchForm.round,
       teamAId: matchForm.teamAId,
       teamBId: matchForm.teamBId,
@@ -145,7 +152,22 @@ export const FixturesResultsView = ({
   const handleScorecardSubmit = (e) => {
     e.preventDefault();
     if (!scoringMatch) return;
-    onUpdateMatch(scoringMatch.id, scoringMatch);
+    const rawAOvers = String(scoringMatch.teamAOvers ?? '').trim();
+    const rawBOvers = String(scoringMatch.teamBOvers ?? '').trim();
+    if (rawAOvers !== '' && (isNaN(Number(rawAOvers)) || Number(rawAOvers) < 0 || Number(rawAOvers) > 100)) {
+      alert('Team A overs faced must be a valid number between 0 and 100.');
+      return;
+    }
+    if (rawBOvers !== '' && (isNaN(Number(rawBOvers)) || Number(rawBOvers) < 0 || Number(rawBOvers) > 100)) {
+      alert('Team B overs faced must be a valid number between 0 and 100.');
+      return;
+    }
+    const cleanMatch = {
+      ...scoringMatch,
+      teamAOvers: rawAOvers === '' ? undefined : parseFloat(rawAOvers),
+      teamBOvers: rawBOvers === '' ? undefined : parseFloat(rawBOvers)
+    };
+    onUpdateMatch(scoringMatch.id, cleanMatch);
     setScoringMatch(null);
   };
 
@@ -235,7 +257,7 @@ export const FixturesResultsView = ({
               <a
                 href={liveUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener"
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 <span>Open Portal</span>
@@ -290,7 +312,7 @@ export const FixturesResultsView = ({
             <a
               href={liveUrl}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener"
               className="flex items-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs hover:shadow-sm"
             >
               <span>Open in CricHeroes</span>
@@ -325,7 +347,7 @@ export const FixturesResultsView = ({
                 <a
                   href={liveUrl}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener"
                   className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
                 >
                   <Radio className="w-4 h-4 text-slate-950 animate-pulse" />
@@ -334,7 +356,7 @@ export const FixturesResultsView = ({
                 <a
                   href={cricLinks.base}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener"
                   className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm border border-slate-700 transition-colors"
                 >
                   <span>Tournament Overview</span>
@@ -350,7 +372,7 @@ export const FixturesResultsView = ({
             <a
               href={cricLinks.live}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener"
               className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-rose-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
             >
               <div className="space-y-1.5 sm:space-y-2">
@@ -379,7 +401,7 @@ export const FixturesResultsView = ({
             <a
               href={cricLinks.upcoming}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener"
               className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
             >
               <div className="space-y-1.5 sm:space-y-2">
@@ -408,7 +430,7 @@ export const FixturesResultsView = ({
             <a
               href={cricLinks.past}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener"
               className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
             >
               <div className="space-y-1.5 sm:space-y-2">
@@ -437,7 +459,7 @@ export const FixturesResultsView = ({
             <a
               href={cricLinks.pointsTable}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener"
               className="group p-4 sm:p-5 rounded-xl bg-white border border-slate-200/90 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between gap-3 sm:gap-4"
             >
               <div className="space-y-1.5 sm:space-y-2">
@@ -662,8 +684,8 @@ export const FixturesResultsView = ({
                 type="number"
                 required
                 min={1}
-                value={matchForm.matchNumber}
-                onChange={e => setMatchForm({ ...matchForm, matchNumber: parseInt(e.target.value, 10) || 1 })}
+                value={matchForm.matchNumber ?? ''}
+                onChange={e => setMatchForm({ ...matchForm, matchNumber: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -823,10 +845,11 @@ export const FixturesResultsView = ({
                     <label className="block text-[11px] text-slate-500 mb-0.5">Overs Faced</label>
                     <input
                       type="number"
-                      step={0.1}
+                      min="0"
+                      step="any"
                       placeholder="20.0"
-                      value={scoringMatch.teamAOvers || ''}
-                      onChange={e => setScoringMatch({ ...scoringMatch, teamAOvers: parseFloat(e.target.value) || undefined })}
+                      value={scoringMatch.teamAOvers ?? ''}
+                      onChange={e => setScoringMatch({ ...scoringMatch, teamAOvers: e.target.value })}
                       className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono"
                     />
                   </div>
@@ -853,10 +876,11 @@ export const FixturesResultsView = ({
                     <label className="block text-[11px] text-slate-500 mb-0.5">Overs Faced</label>
                     <input
                       type="number"
-                      step={0.1}
+                      min="0"
+                      step="any"
                       placeholder="20.0"
-                      value={scoringMatch.teamBOvers || ''}
-                      onChange={e => setScoringMatch({ ...scoringMatch, teamBOvers: parseFloat(e.target.value) || undefined })}
+                      value={scoringMatch.teamBOvers ?? ''}
+                      onChange={e => setScoringMatch({ ...scoringMatch, teamBOvers: e.target.value })}
                       className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono"
                     />
                   </div>

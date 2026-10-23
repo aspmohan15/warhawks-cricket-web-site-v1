@@ -85,6 +85,16 @@ export const RegistrationView = ({
 
   // Dynamic guest count handler ensuring exact matching array of independent preferences and meals
   const handleGuestCountChange = (count) => {
+    if (count === '') {
+      setPlayerForm(prev => ({
+        ...prev,
+        guestCount: '',
+        guests: [],
+        hasGuestBreakfast: false,
+        hasGuestLunch: false
+      }));
+      return;
+    }
     const newCount = Math.max(0, Math.min(20, parseInt(count, 10) || 0));
     setPlayerForm(prev => {
       let updatedGuests = [...(prev.guests || [])];
@@ -105,7 +115,7 @@ export const RegistrationView = ({
 
       return {
         ...prev,
-        guestCount: newCount,
+        guestCount: count,
         guests: updatedGuests,
         hasGuestBreakfast: updatedGuests.some(g => g.hasBreakfast),
         hasGuestLunch: updatedGuests.some(g => g.hasLunch)
@@ -197,7 +207,28 @@ export const RegistrationView = ({
       return;
     }
 
-    const gCount = Math.max(0, parseInt(playerForm.guestCount, 10) || 0);
+    const rawAge = String(playerForm.age ?? '').trim();
+    if (rawAge === '' || isNaN(Number(rawAge)) || Number(rawAge) < 16 || Number(rawAge) > 50) {
+      alert('Please enter a valid athlete age between 16 and 50 years.');
+      return;
+    }
+
+    const rawJersey = String(playerForm.preferredJerseyNo ?? '').trim();
+    if (rawJersey !== '' && (isNaN(Number(rawJersey)) || Number(rawJersey) < 0 || Number(rawJersey) > 999)) {
+      alert('Preferred jersey number must be between 0 and 999.');
+      return;
+    }
+
+    const rawGuest = String(playerForm.guestCount ?? '').trim();
+    if (rawGuest !== '' && (isNaN(Number(rawGuest)) || Number(rawGuest) < 0 || Number(rawGuest) > 20)) {
+      alert('Guest number must be between 0 and 20.');
+      return;
+    }
+
+    const cleanAge = Number(rawAge);
+    const cleanJersey = rawJersey === '' ? 18 : Number(rawJersey);
+    const gCount = rawGuest === '' ? 0 : Math.max(0, parseInt(rawGuest, 10) || 0);
+
     // Ensure guests array exactly matches guest count with independent dietary and meal selections
     const sanitizedGuests = (playerForm.guests || []).slice(0, gCount).map((g, idx) => ({
       guestNumber: idx + 1,
@@ -222,6 +253,8 @@ export const RegistrationView = ({
     onPlayerRegister({
       tournamentId: tournament?.id || '',
       ...playerForm,
+      age: cleanAge,
+      preferredJerseyNo: cleanJersey,
       guestCount: gCount,
       guests: sanitizedGuests,
       hasGuestBreakfast: sanitizedGuests.some(g => g.hasBreakfast),
@@ -613,8 +646,8 @@ export const RegistrationView = ({
                         required
                         min={16}
                         max={50}
-                        value={playerForm.age}
-                        onChange={e => setPlayerForm({ ...playerForm, age: parseInt(e.target.value, 10) || 24 })}
+                        value={playerForm.age ?? ''}
+                        onChange={e => setPlayerForm({ ...playerForm, age: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                       />
                     </div>
@@ -666,8 +699,8 @@ export const RegistrationView = ({
                         type="number"
                         min={1}
                         max={99}
-                        value={playerForm.preferredJerseyNo}
-                        onChange={e => setPlayerForm({ ...playerForm, preferredJerseyNo: parseInt(e.target.value, 10) || 1 })}
+                        value={playerForm.preferredJerseyNo ?? ''}
+                        onChange={e => setPlayerForm({ ...playerForm, preferredJerseyNo: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                       />
                     </div>
@@ -762,12 +795,12 @@ export const RegistrationView = ({
                             type="number"
                             min={0}
                             max={20}
-                            value={playerForm.guestCount}
+                            value={playerForm.guestCount ?? ''}
                             onChange={e => handleGuestCountChange(e.target.value)}
                             className="w-32 px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold bg-white"
                           />
                           <span className="text-slate-500 text-xs">
-                            {playerForm.guestCount === 0
+                            {playerForm.guestCount === '' || Number(playerForm.guestCount) === 0
                               ? 'Enter 0 if attending solo (no guests)'
                               : `${playerForm.guestCount} guest(s) registered with independent dietary selections`}
                           </span>
@@ -775,7 +808,7 @@ export const RegistrationView = ({
                       </div>
 
                       {/* Independent Dietary & Meal Selection for EACH Guest */}
-                      {playerForm.guestCount > 0 && (
+                      {Number(playerForm.guestCount) > 0 && (
                         <div className="space-y-3 pt-3 border-t border-slate-200/80">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">

@@ -149,12 +149,6 @@ export const AuctionView = ({
                   <span>{activePlayer?.battingStyle}</span>
                   <span>·</span>
                   <span>{activePlayer?.bowlingStyle}</span>
-                  {activePlayer?.isOverseas && (
-                    <>
-                      <span>·</span>
-                      <span className="text-sky-400 font-semibold">Overseas Player</span>
-                    </>
-                  )}
                 </div>
               </div>
 

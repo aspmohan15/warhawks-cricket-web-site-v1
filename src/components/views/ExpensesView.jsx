@@ -46,15 +46,15 @@ export const ExpensesView = ({
       return;
     }
 
-    const rawTotal = String(form.amount).trim();
-    if (rawTotal === '' || isNaN(Number(rawTotal)) || Number(rawTotal) <= 0) {
-      alert('Please enter a valid total expense amount (₹).');
+    const rawTotal = String(form.amount ?? '').trim();
+    if (rawTotal === '' || isNaN(Number(rawTotal)) || Number(rawTotal) < 0) {
+      alert('Please enter a valid non-negative total expense amount (₹).');
       return;
     }
-    const totalAmount = Number(rawTotal);
+    const totalAmount = Math.max(0, Number(rawTotal) || 0);
 
-    const rawAdvance = String(form.advanceAmount).trim();
-    const advance = rawAdvance === '' ? 0 : Number(rawAdvance);
+    const rawAdvance = String(form.advanceAmount ?? '').trim();
+    const advance = rawAdvance === '' ? 0 : Math.max(0, Number(rawAdvance) || 0);
     if (isNaN(advance) || advance < 0) {
       alert('Advance amount cannot be negative.');
       return;
@@ -76,6 +76,18 @@ export const ExpensesView = ({
       paymentStatus: form.paymentStatus,
       notes: form.notes?.trim() || '',
       receiptUrl: form.receiptUrl || undefined
+    });
+    setForm({
+      title: '',
+      category: 'Ground & Pitch',
+      amount: '',
+      advanceAmount: '',
+      date: new Date().toISOString().split('T')[0],
+      vendorName: '',
+      paymentMode: 'Bank Transfer',
+      paymentStatus: 'paid',
+      notes: '',
+      receiptUrl: ''
     });
     setCreateModalOpen(false);
   };
@@ -476,15 +488,36 @@ export const ExpensesView = ({
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Amount (₹)</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Total Amount (₹) <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="number"
                 required
-                step={1000}
-                value={form.amount}
-                onChange={e => setForm({ ...form, amount: parseInt(e.target.value, 10) || 0 })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold"
+                min="0"
+                step="any"
+                placeholder="0"
+                value={form.amount ?? ''}
+                onChange={e => setForm({ ...form, amount: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold text-xs"
               />
+              <p className="text-[10px] text-slate-400 mt-0.5">Accepts ₹0 or any non-negative amount</p>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Advance Amount (₹)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder="0"
+                value={form.advanceAmount ?? ''}
+                onChange={e => setForm({ ...form, advanceAmount: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+              />
+              <p className="text-[10px] text-slate-400 mt-0.5">Advance paid (₹0 or any non-negative)</p>
             </div>
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Date</label>

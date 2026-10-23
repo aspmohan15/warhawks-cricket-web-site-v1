@@ -876,23 +876,23 @@ app.post('/api/players', requireOrganizer, async (req: Request, res: Response) =
     const query = `
       INSERT INTO public.players (
         id, tournament_id, name, jersey_number, role, batting_style, bowling_style,
-        base_price, sold_price, team_id, is_captain, is_overseas, email, phone, city,
+        base_price, sold_price, team_id, is_captain, is_vice_captain, is_wicket_keeper, is_overseas, email, phone, city,
         shirt_size, food_preference, registration_status, payment_status, matches_played,
         runs_scored, highest_score, wickets_taken, best_bowling, strike_rate, economy_rate,
         auction_status, photo_url
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25, $26,
-        $27, $28
+        $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+        $18, $19, $20, $21, $22,
+        $23, $24, $25, $26, $27, $28,
+        $29, $30
       ) RETURNING *;
     `;
     const values = [
       p.id, p.tournamentId, p.name, p.jerseyNumber || 10, p.role || 'All-Rounder',
       p.battingStyle || 'Right-hand bat', p.bowlingStyle || 'Right-arm medium',
       p.basePrice || 500000, p.soldPrice || null, p.teamId || null,
-      Boolean(p.isCaptain), Boolean(p.isOverseas), p.email, p.phone, p.city || 'Mumbai',
+      Boolean(p.isCaptain), Boolean(p.isViceCaptain), Boolean(p.isWicketKeeper), Boolean(p.isOverseas), p.email, p.phone, p.city || 'Mumbai',
       p.shirtSize || 'L', p.foodPreference || 'Veg', p.registrationStatus || 'approved',
       p.paymentStatus || 'paid', p.matchesPlayed || 0, p.runsScored || 0, p.highestScore || 0,
       p.wicketsTaken || 0, p.bestBowling || '-', p.strikeRate || 0, p.economyRate || 0,
@@ -919,6 +919,8 @@ app.patch('/api/players/:id', requireOrganizer, async (req: Request, res: Respon
       soldPrice: 'sold_price',
       teamId: 'team_id',
       isCaptain: 'is_captain',
+      isViceCaptain: 'is_vice_captain',
+      isWicketKeeper: 'is_wicket_keeper',
       isOverseas: 'is_overseas',
       email: 'email',
       phone: 'phone',

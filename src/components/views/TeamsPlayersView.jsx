@@ -62,7 +62,8 @@ export const TeamsPlayersView = ({
     soldPrice: 0,
     teamId: '',
     isCaptain: false,
-    isOverseas: false,
+    isViceCaptain: false,
+    isWicketKeeper: false,
     email: '',
     phone: '',
     city: tournament?.city || 'Mumbai',
@@ -78,15 +79,22 @@ export const TeamsPlayersView = ({
       onNavigateToEditions?.();
       return;
     }
+    const rawBudget = String(teamForm.budgetTotal ?? '').trim();
+    if (rawBudget === '' || isNaN(Number(rawBudget)) || Number(rawBudget) < 0) {
+      alert('Please enter a valid auction budget purse (points) >= 0.');
+      return;
+    }
+    const cleanBudget = Number(rawBudget);
+
     onCreateTeam({
       tournamentId: tournament?.id || '',
       name: teamForm.name,
       shortCode: (teamForm.shortCode || 'TEAM').toUpperCase(),
       primaryColor: teamForm.primaryColor || '#0284c7',
       secondaryColor: teamForm.secondaryColor || '#0f172a',
-      budgetTotal: Number(teamForm.budgetTotal) || tournament?.totalBudgetPointsPerTeam || 10000000,
+      budgetTotal: cleanBudget,
       budgetSpent: 0,
-      budgetRemaining: Number(teamForm.budgetTotal) || tournament?.totalBudgetPointsPerTeam || 10000000,
+      budgetRemaining: cleanBudget,
       totalPlayersAssigned: 0
     });
     setCreateTeamModalOpen(false);
@@ -99,19 +107,43 @@ export const TeamsPlayersView = ({
       onNavigateToEditions?.();
       return;
     }
+
+    const rawJersey = String(playerForm.jerseyNumber ?? '').trim();
+    if (rawJersey === '' || isNaN(Number(rawJersey)) || Number(rawJersey) < 0 || Number(rawJersey) > 999) {
+      alert('Please enter a valid jersey number between 0 and 999.');
+      return;
+    }
+    const cleanJersey = Number(rawJersey);
+
+    const rawBasePrice = String(playerForm.basePrice ?? '').trim();
+    if (rawBasePrice === '' || isNaN(Number(rawBasePrice)) || Number(rawBasePrice) < 0) {
+      alert('Please enter a valid auction base price (points) >= 0.');
+      return;
+    }
+    const cleanBasePrice = Number(rawBasePrice);
+
+    const rawSoldPrice = String(playerForm.soldPrice ?? '').trim();
+    if (rawSoldPrice !== '' && (isNaN(Number(rawSoldPrice)) || Number(rawSoldPrice) < 0)) {
+      alert('Sold price must be a valid non-negative number.');
+      return;
+    }
+    const cleanSoldPrice = playerForm.teamId ? (rawSoldPrice === '' ? 0 : Number(rawSoldPrice)) : undefined;
+
     onCreatePlayer({
       tournamentId: tournament?.id || '',
       name: playerForm.name,
-      jerseyNumber: Number(playerForm.jerseyNumber) || 10,
+      jerseyNumber: cleanJersey,
       role: playerForm.role || 'All-Rounder',
       battingStyle: playerForm.battingStyle || 'Right-hand bat',
       bowlingStyle: playerForm.bowlingStyle || 'Right-arm medium',
-      basePrice: Number(playerForm.basePrice) || 500000,
-      soldPrice: playerForm.teamId ? (Number(playerForm.soldPrice) || Number(playerForm.basePrice) || 500000) : undefined,
+      basePrice: cleanBasePrice,
+      soldPrice: cleanSoldPrice,
       teamId: playerForm.teamId || undefined,
       auctionStatus: playerForm.teamId ? 'sold' : 'available',
       isCaptain: Boolean(playerForm.isCaptain),
-      isOverseas: Boolean(playerForm.isOverseas),
+      isViceCaptain: Boolean(playerForm.isViceCaptain),
+      isWicketKeeper: Boolean(playerForm.isWicketKeeper),
+      isOverseas: false,
       email: playerForm.email || `${(playerForm.name || 'player').toLowerCase().replace(/\s+/g, '.')}@crickethq.local`,
       phone: playerForm.phone || '+91 98000 00000',
       city: playerForm.city || tournament?.city || 'Mumbai',
@@ -206,13 +238,6 @@ export const TeamsPlayersView = ({
           {isOrganizer ? (
             <>
               <button
-                onClick={onOpenImport}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 min-h-[38px] rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Import CSV</span>
-              </button>
-              <button
                 onClick={handleExportRoster}
                 className="flex items-center justify-center gap-1.5 px-3 py-2 min-h-[38px] rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
               >
@@ -249,7 +274,8 @@ export const TeamsPlayersView = ({
                     soldPrice: 0,
                     teamId: '',
                     isCaptain: false,
-                    isOverseas: false,
+                    isViceCaptain: false,
+                    isWicketKeeper: false,
                     email: '',
                     phone: '',
                     city: tournament?.city || 'Mumbai',
@@ -343,7 +369,6 @@ export const TeamsPlayersView = ({
             {teams.map(team => {
             const teamSquad = players.filter(p => p.teamId === team.id);
             const captain = teamSquad.find(p => p.isCaptain);
-            const overseasCount = teamSquad.filter(p => p.isOverseas).length;
             const budgetPercent = Math.min(100, Math.round((team.budgetSpent / team.budgetTotal) * 100));
 
             return (
@@ -418,9 +443,6 @@ export const TeamsPlayersView = ({
                 <div className="p-4 flex-1">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-2.5">
                     <span>Squad Roster ({teamSquad.length}/{tournament?.maxSquadSize || 18})</span>
-                    <span className="text-[11px] text-slate-400 font-normal">
-                      Overseas: {overseasCount}/{tournament?.maxOverseasPlayers || 4}
-                    </span>
                   </div>
 
                   {teamSquad.length === 0 ? (
@@ -436,8 +458,18 @@ export const TeamsPlayersView = ({
                         >
                           <div className="flex items-center gap-2 truncate">
                             {player.isCaptain && (
-                              <span className="text-[10px] bg-amber-500 text-white font-bold px-1 rounded">
+                              <span className="text-[10px] bg-amber-500 text-white font-bold px-1 rounded" title="Captain">
                                 C
+                              </span>
+                            )}
+                            {player.isViceCaptain && (
+                              <span className="text-[10px] bg-blue-600 text-white font-bold px-1 rounded" title="Vice Captain">
+                                VC
+                              </span>
+                            )}
+                            {player.isWicketKeeper && (
+                              <span className="text-[10px] bg-purple-600 text-white font-bold px-1 rounded" title="Wicket Keeper">
+                                WK
                               </span>
                             )}
                             <span className="font-semibold text-slate-800 truncate">{player.name}</span>
@@ -546,13 +578,18 @@ export const TeamsPlayersView = ({
                           <div className="font-bold text-slate-900 text-sm truncate flex items-center gap-1.5">
                             <span className="truncate">{player.name}</span>
                             {player.isCaptain && (
-                              <span className="text-[10px] bg-amber-500 text-white font-bold px-1 rounded shrink-0">
+                              <span className="text-[10px] bg-amber-500 text-white font-bold px-1 rounded shrink-0" title="Captain">
                                 C
                               </span>
                             )}
-                            {player.isOverseas && (
-                              <span className="text-[10px] bg-blue-100 text-blue-800 font-semibold px-1 rounded shrink-0">
-                                OS
+                            {player.isViceCaptain && (
+                              <span className="text-[10px] bg-blue-600 text-white font-bold px-1 rounded shrink-0" title="Vice Captain">
+                                VC
+                              </span>
+                            )}
+                            {player.isWicketKeeper && (
+                              <span className="text-[10px] bg-purple-600 text-white font-bold px-1 rounded shrink-0" title="Wicket Keeper">
+                                WK
                               </span>
                             )}
                           </div>
@@ -670,9 +707,14 @@ export const TeamsPlayersView = ({
                                       Captain
                                     </span>
                                   )}
-                                  {player.isOverseas && (
-                                    <span className="text-[10px] bg-blue-100 text-blue-800 font-semibold px-1 rounded">
-                                      Overseas
+                                  {player.isViceCaptain && (
+                                    <span className="text-[10px] bg-blue-600 text-white font-bold px-1 rounded">
+                                      Vice Captain
+                                    </span>
+                                  )}
+                                  {player.isWicketKeeper && (
+                                    <span className="text-[10px] bg-purple-600 text-white font-bold px-1 rounded">
+                                      Wicket Keeper
                                     </span>
                                   )}
                                 </div>
@@ -810,9 +852,10 @@ export const TeamsPlayersView = ({
               <input
                 type="number"
                 required
-                step={500000}
-                value={teamForm.budgetTotal}
-                onChange={e => setTeamForm({ ...teamForm, budgetTotal: parseInt(e.target.value, 10) || 10000000 })}
+                min="0"
+                step="any"
+                value={teamForm.budgetTotal ?? ''}
+                onChange={e => setTeamForm({ ...teamForm, budgetTotal: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
             </div>
@@ -890,21 +933,21 @@ export const TeamsPlayersView = ({
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">City</label>
+                <label className="block font-semibold text-slate-700 mb-1">City (Optional)</label>
                 <input
                   type="text"
-                  required
-                  value={editingTeam.city}
+                  placeholder="e.g. Mumbai"
+                  value={editingTeam.city || ''}
                   onChange={e => setEditingTeam({ ...editingTeam, city: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="col-span-2">
-                <label className="block font-semibold text-slate-700 mb-1">Owner Name</label>
+                <label className="block font-semibold text-slate-700 mb-1">Owner Name (Optional)</label>
                 <input
                   type="text"
-                  required
-                  value={editingTeam.ownerName}
+                  placeholder="Franchise Owner"
+                  value={editingTeam.ownerName || ''}
                   onChange={e => setEditingTeam({ ...editingTeam, ownerName: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
@@ -954,10 +997,10 @@ export const TeamsPlayersView = ({
               <label className="block font-semibold text-slate-700 mb-1">Jersey Number</label>
               <input
                 type="number"
-                min={1}
+                min={0}
                 max={999}
-                value={playerForm.jerseyNumber}
-                onChange={e => setPlayerForm({ ...playerForm, jerseyNumber: parseInt(e.target.value, 10) || 1 })}
+                value={playerForm.jerseyNumber ?? ''}
+                onChange={e => setPlayerForm({ ...playerForm, jerseyNumber: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -992,6 +1035,7 @@ export const TeamsPlayersView = ({
                 onChange={e => setPlayerForm({ ...playerForm, bowlingStyle: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
+                <option value="None">None</option>
                 <option value="Right-arm fast">Right-arm fast</option>
                 <option value="Right-arm medium">Right-arm medium</option>
                 <option value="Left-arm fast">Left-arm fast</option>
@@ -1004,10 +1048,11 @@ export const TeamsPlayersView = ({
               <label className="block font-semibold text-slate-700 mb-1">Auction Base Price (Points)</label>
               <input
                 type="number"
-                step={50000}
+                min="0"
+                step="any"
                 required
-                value={playerForm.basePrice}
-                onChange={e => setPlayerForm({ ...playerForm, basePrice: parseInt(e.target.value, 10) || 300000 })}
+                value={playerForm.basePrice ?? ''}
+                onChange={e => setPlayerForm({ ...playerForm, basePrice: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -1035,9 +1080,6 @@ export const TeamsPlayersView = ({
               >
                 <option value="Veg">Vegetarian</option>
                 <option value="Non-Veg">Non-Vegetarian</option>
-                <option value="Jain">Jain (No Root Veg)</option>
-                <option value="Vegan">Vegan</option>
-                <option value="Halal">Halal</option>
               </select>
             </div>
             <div>
@@ -1054,7 +1096,7 @@ export const TeamsPlayersView = ({
                 <option value="XXL">Double Extra Large (XXL)</option>
               </select>
             </div>
-            <div className="flex items-center gap-4 pt-6">
+            <div className="flex flex-wrap items-center gap-4 pt-6 col-span-2">
               <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
                 <input
                   type="checkbox"
@@ -1067,11 +1109,20 @@ export const TeamsPlayersView = ({
               <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
                 <input
                   type="checkbox"
-                  checked={playerForm.isOverseas}
-                  onChange={e => setPlayerForm({ ...playerForm, isOverseas: e.target.checked })}
-                  className="rounded text-emerald-600 focus:ring-emerald-500"
+                  checked={playerForm.isViceCaptain}
+                  onChange={e => setPlayerForm({ ...playerForm, isViceCaptain: e.target.checked })}
+                  className="rounded text-blue-600 focus:ring-blue-500"
                 />
-                Overseas Player
+                Vice Captain
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={playerForm.isWicketKeeper}
+                  onChange={e => setPlayerForm({ ...playerForm, isWicketKeeper: e.target.checked })}
+                  className="rounded text-purple-600 focus:ring-purple-500"
+                />
+                Wicket Keeper
               </label>
             </div>
           </div>
@@ -1104,7 +1155,22 @@ export const TeamsPlayersView = ({
           <form
             onSubmit={e => {
               e.preventDefault();
-              onUpdatePlayer(editingPlayer.id, editingPlayer);
+              const rawBase = String(editingPlayer.basePrice ?? '').trim();
+              const rawSold = String(editingPlayer.soldPrice ?? '').trim();
+              if (rawBase !== '' && (isNaN(Number(rawBase)) || Number(rawBase) < 0)) {
+                alert('Base price must be a valid non-negative number.');
+                return;
+              }
+              if (rawSold !== '' && (isNaN(Number(rawSold)) || Number(rawSold) < 0)) {
+                alert('Sold price must be a valid non-negative number.');
+                return;
+              }
+              const cleanPlayer = {
+                ...editingPlayer,
+                basePrice: rawBase === '' ? 0 : Number(rawBase),
+                soldPrice: rawSold === '' ? 0 : Number(rawSold)
+              };
+              onUpdatePlayer(editingPlayer.id, cleanPlayer);
               setEditingPlayer(null);
             }}
             className="space-y-4 text-xs"
@@ -1139,8 +1205,10 @@ export const TeamsPlayersView = ({
                 <label className="block font-semibold text-slate-700 mb-1">Base Price</label>
                 <input
                   type="number"
-                  value={editingPlayer.basePrice}
-                  onChange={e => setEditingPlayer({ ...editingPlayer, basePrice: parseInt(e.target.value, 10) || 0 })}
+                  min="0"
+                  step="any"
+                  value={editingPlayer.basePrice ?? ''}
+                  onChange={e => setEditingPlayer({ ...editingPlayer, basePrice: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -1148,20 +1216,40 @@ export const TeamsPlayersView = ({
                 <label className="block font-semibold text-slate-700 mb-1">Sold Price</label>
                 <input
                   type="number"
-                  value={editingPlayer.soldPrice || 0}
-                  onChange={e => setEditingPlayer({ ...editingPlayer, soldPrice: parseInt(e.target.value, 10) || 0 })}
+                  min="0"
+                  step="any"
+                  value={editingPlayer.soldPrice ?? ''}
+                  onChange={e => setEditingPlayer({ ...editingPlayer, soldPrice: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
-              <div className="flex items-center gap-4 pt-6">
+              <div className="flex flex-wrap items-center gap-4 pt-6 col-span-2">
                 <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
                   <input
                     type="checkbox"
-                    checked={editingPlayer.isCaptain}
+                    checked={Boolean(editingPlayer.isCaptain)}
                     onChange={e => setEditingPlayer({ ...editingPlayer, isCaptain: e.target.checked })}
                     className="rounded text-emerald-600 focus:ring-emerald-500"
                   />
                   Captain
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingPlayer.isViceCaptain)}
+                    onChange={e => setEditingPlayer({ ...editingPlayer, isViceCaptain: e.target.checked })}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  Vice Captain
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingPlayer.isWicketKeeper)}
+                    onChange={e => setEditingPlayer({ ...editingPlayer, isWicketKeeper: e.target.checked })}
+                    className="rounded text-purple-600 focus:ring-purple-500"
+                  />
+                  Wicket Keeper
                 </label>
               </div>
             </div>

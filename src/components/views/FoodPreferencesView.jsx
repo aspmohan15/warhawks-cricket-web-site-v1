@@ -241,7 +241,13 @@ export const FoodPreferencesView = ({
   const handleSaveEditModal = (e) => {
     e.preventDefault();
     if (!editingRegistration) return;
-    const guests = editingRegistration.guests || [];
+    const rawCount = String(editingRegistration.guestCount ?? '').trim();
+    if (rawCount !== '' && (isNaN(Number(rawCount)) || Number(rawCount) < 0 || Number(rawCount) > 20)) {
+      alert('Please enter a valid guest number between 0 and 20.');
+      return;
+    }
+    const cleanGuestCount = rawCount === '' ? 0 : Math.max(0, parseInt(rawCount, 10) || 0);
+    const guests = (editingRegistration.guests || []).slice(0, cleanGuestCount);
     const hasAnyBreakfast = guests.some(g => g.hasBreakfast);
     const hasAnyLunch = guests.some(g => g.hasLunch);
 
@@ -249,7 +255,7 @@ export const FoodPreferencesView = ({
       foodPreference: editingRegistration.playerDiet,
       hasBreakfast: editingRegistration.playerHasBreakfast,
       hasLunch: editingRegistration.playerHasLunch,
-      guestCount: editingRegistration.guestCount,
+      guestCount: cleanGuestCount,
       guests,
       guestFoodPreference: guests[0]?.dietaryPreference || 'Veg',
       hasGuestBreakfast: hasAnyBreakfast,
@@ -761,9 +767,20 @@ export const FoodPreferencesView = ({
                   type="number"
                   min={0}
                   max={20}
-                  value={editingRegistration.guestCount}
+                  value={editingRegistration.guestCount ?? ''}
                   onChange={e => {
-                    const count = Math.max(0, parseInt(e.target.value, 10) || 0);
+                    const val = e.target.value;
+                    if (val === '') {
+                      setEditingRegistration({
+                        ...editingRegistration,
+                        guestCount: '',
+                        guests: [],
+                        hasGuestBreakfast: false,
+                        hasGuestLunch: false
+                      });
+                      return;
+                    }
+                    const count = Math.max(0, parseInt(val, 10) || 0);
                     let updatedGuests = [...(editingRegistration.guests || [])];
                     if (count > updatedGuests.length) {
                       for (let i = updatedGuests.length; i < count; i++) {
@@ -779,7 +796,7 @@ export const FoodPreferencesView = ({
                     }
                     setEditingRegistration({
                       ...editingRegistration,
-                      guestCount: count,
+                      guestCount: val,
                       guests: updatedGuests,
                       hasGuestBreakfast: updatedGuests.some(g => g.hasBreakfast),
                       hasGuestLunch: updatedGuests.some(g => g.hasLunch)
@@ -790,7 +807,7 @@ export const FoodPreferencesView = ({
               </div>
 
               {/* Independent Dietary & Meal Selection for Each Guest */}
-              {editingRegistration.guestCount > 0 && Array.isArray(editingRegistration.guests) && editingRegistration.guests.length > 0 && (
+              {Number(editingRegistration.guestCount) > 0 && Array.isArray(editingRegistration.guests) && editingRegistration.guests.length > 0 && (
                 <div className="pt-2 border-t border-slate-200/70 space-y-2.5">
                   <span className="text-[11px] font-bold text-slate-800 block">
                     Individual Guest Dietary & Meal Preferences ({editingRegistration.guestCount} Guests):

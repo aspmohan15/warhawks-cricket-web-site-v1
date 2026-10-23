@@ -94,7 +94,31 @@ export const EditionsView = ({
 
   const handleSubmitCreate = (e) => {
     e.preventDefault();
-    onCreateEdition(formData);
+    const rawEdNum = String(formData.editionNumber ?? '').trim();
+    if (rawEdNum === '' || isNaN(Number(rawEdNum)) || Number(rawEdNum) < 1) {
+      alert('Please enter a valid edition number (1 or greater).');
+      return;
+    }
+
+    const rawYear = String(formData.year ?? '').trim();
+    if (rawYear === '' || isNaN(Number(rawYear)) || Number(rawYear) < 1900 || Number(rawYear) > 2100) {
+      alert('Please enter a valid 4-digit tournament year.');
+      return;
+    }
+
+    const rawBudget = String(formData.totalBudgetPointsPerTeam ?? '').trim();
+    if (rawBudget === '' || isNaN(Number(rawBudget)) || Number(rawBudget) < 0) {
+      alert('Please enter a valid team auction budget purse (points) >= 0.');
+      return;
+    }
+
+    const cleanData = {
+      ...formData,
+      editionNumber: Number(rawEdNum),
+      year: Number(rawYear),
+      totalBudgetPointsPerTeam: Number(rawBudget)
+    };
+    onCreateEdition(cleanData);
     setCreateModalOpen(false);
   };
 
@@ -105,7 +129,16 @@ export const EditionsView = ({
   const handleSubmitEdit = (e) => {
     e.preventDefault();
     if (!editingEdition) return;
-    onUpdateEdition(editingEdition.id, editingEdition);
+    const rawBudget = String(editingEdition.totalBudgetPointsPerTeam ?? '').trim();
+    if (rawBudget !== '' && (isNaN(Number(rawBudget)) || Number(rawBudget) < 0)) {
+      alert('Team auction budget purse must be a valid non-negative number.');
+      return;
+    }
+    const cleanEdition = {
+      ...editingEdition,
+      totalBudgetPointsPerTeam: rawBudget === '' ? 10000000 : Number(rawBudget)
+    };
+    onUpdateEdition(editingEdition.id, cleanEdition);
     setEditingEdition(null);
   };
 
@@ -472,8 +505,8 @@ export const EditionsView = ({
                 type="number"
                 required
                 min={1}
-                value={formData.editionNumber}
-                onChange={e => setFormData({ ...formData, editionNumber: parseInt(e.target.value, 10) || 1 })}
+                value={formData.editionNumber ?? ''}
+                onChange={e => setFormData({ ...formData, editionNumber: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -485,8 +518,8 @@ export const EditionsView = ({
                 required
                 min={2000}
                 max={2040}
-                value={formData.year}
-                onChange={e => setFormData({ ...formData, year: parseInt(e.target.value, 10) || 2026 })}
+                value={formData.year ?? ''}
+                onChange={e => setFormData({ ...formData, year: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -566,9 +599,10 @@ export const EditionsView = ({
               <input
                 type="number"
                 required
-                step={500000}
-                value={formData.totalBudgetPointsPerTeam}
-                onChange={e => setFormData({ ...formData, totalBudgetPointsPerTeam: parseInt(e.target.value, 10) || 10000000 })}
+                min="0"
+                step="any"
+                value={formData.totalBudgetPointsPerTeam ?? ''}
+                onChange={e => setFormData({ ...formData, totalBudgetPointsPerTeam: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -673,8 +707,10 @@ export const EditionsView = ({
                 <label className="block font-semibold text-slate-700 mb-1">Team Budget Purse (Points)</label>
                 <input
                   type="number"
-                  value={editingEdition.totalBudgetPointsPerTeam}
-                  onChange={e => setEditingEdition({ ...editingEdition, totalBudgetPointsPerTeam: parseInt(e.target.value, 10) || 10000000 })}
+                  min="0"
+                  step="any"
+                  value={editingEdition.totalBudgetPointsPerTeam ?? ''}
+                  onChange={e => setEditingEdition({ ...editingEdition, totalBudgetPointsPerTeam: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>

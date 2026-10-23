@@ -25,6 +25,7 @@ export const PLAYER_ROLES = ['Batsman', 'Bowler', 'All-Rounder', 'Wicket-Keeper'
 export const BATTING_STYLES = ['Right-hand bat', 'Left-hand bat'];
 
 export const BOWLING_STYLES = [
+  'None',
   'Right-arm fast',
   'Right-arm medium',
   'Left-arm fast',
