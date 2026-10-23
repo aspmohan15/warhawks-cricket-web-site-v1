@@ -109,13 +109,13 @@ export const TopBar = ({
   return (
     <header
       ref={topBarRef}
-      className="h-16 bg-white border-b border-slate-200 px-3 sm:px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs w-full"
+      className="h-16 bg-white border-b border-slate-200 px-2 sm:px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs w-full"
     >
       {/* Left Zone: Mobile Hamburger & Section Label */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 shrink-0">
         <button
           onClick={onOpenMobileSidebar}
-          className="lg:hidden min-w-[42px] min-h-[42px] p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+          className="lg:hidden min-w-[36px] min-h-[36px] p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
           aria-label="Open Navigation Menu"
         >
           <Menu className="w-5 h-5" />
@@ -123,43 +123,51 @@ export const TopBar = ({
 
         {/* Responsive Breadcrumb / Current View title */}
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-slate-500 font-medium min-w-0">
-          <span className="hidden sm:inline text-slate-800 font-bold tracking-tight shrink-0 flex items-center gap-1.5">
-            <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-5 h-5 object-contain rounded bg-white p-0.2 border border-slate-200 shrink-0" />
-            <span>Warhawks</span>
-            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-sans">
+          <span className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <img
+              src={WARHAWKS_LOGO_URL}
+              alt="Warhawks"
+              className="w-7 h-7 sm:w-9 sm:h-9 object-contain rounded-md sm:rounded-lg bg-white p-0.5 border border-slate-200 shadow-2xs shrink-0"
+            />
+            <span className="font-bold text-slate-900 text-sm tracking-tight hidden md:inline shrink-0">
+              Warhawks
+            </span>
+            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-sans hidden lg:inline shrink-0">
               Host
             </span>
           </span>
-          <span className="hidden sm:inline text-slate-300 shrink-0">/</span>
-          <span className="text-slate-900 font-bold sm:font-semibold truncate max-w-[110px] xs:max-w-[140px] sm:max-w-[220px] md:max-w-[320px]">
+          <span className="text-slate-300 shrink-0 hidden md:inline">/</span>
+          <span className="text-slate-900 font-bold sm:font-semibold truncate max-w-[75px] xs:max-w-[105px] sm:max-w-[160px] md:max-w-[220px]">
             <span className="sm:hidden">{sectionTitles[currentSection] || 'Admin'}</span>
             <span className="hidden sm:inline">{sectionFullTitles[currentSection] || 'Admin Console'}</span>
           </span>
         </div>
       </div>
 
-      {/* Center Zone: Active Tournament Edition Switcher */}
-      <div className="relative mx-1 sm:mx-2 shrink-0">
+      {/* Center Zone: Active Tournament Edition Switcher (Dynamically shrinkable) */}
+      <div className="relative mx-1 sm:mx-2 min-w-0 flex-1 max-w-[110px] xs:max-w-[150px] sm:max-w-xs md:max-w-sm lg:max-w-md">
         <button
           onClick={() => {
             setEditionDropdownOpen(!editionDropdownOpen);
             setRoleDropdownOpen(false);
             setQuickActionOpen(false);
           }}
-          className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 min-h-[38px] rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-semibold text-slate-800 cursor-pointer"
+          className="w-full flex items-center justify-between gap-1 sm:gap-1.5 px-1.5 xs:px-2 sm:px-3 py-1.5 min-h-[36px] sm:min-h-[38px] rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-all text-xs font-semibold text-slate-800 cursor-pointer min-w-0 shadow-2xs"
           aria-label="Switch Tournament Edition"
           title="Switch active tournament edition"
         >
-          <Trophy className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span className="max-w-[90px] xs:max-w-[130px] sm:max-w-[200px] truncate">
-            {activeTournament ? (
-              <>
-                <span className="sm:hidden font-mono">Ed. {activeTournament.editionNumber}</span>
-                <span className="hidden sm:inline">Ed. {activeTournament.editionNumber}: {activeTournament.name}</span>
-              </>
-            ) : (tournaments.length > 0 ? 'Select Edition' : 'No Tournaments')}
-          </span>
-          <ChevronDown className="w-3 h-3 text-slate-500 shrink-0" />
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <Trophy className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="truncate text-left flex-1 min-w-0">
+              {activeTournament ? (
+                <>
+                  <span className="sm:hidden font-mono">Ed. {activeTournament.editionNumber}</span>
+                  <span className="hidden sm:inline">Ed. {activeTournament.editionNumber}: {activeTournament.name}</span>
+                </>
+              ) : (tournaments.length > 0 ? 'Select' : 'None')}
+            </span>
+          </div>
+          <ChevronDown className={`w-3 h-3 text-slate-500 shrink-0 transition-transform duration-150 ${editionDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {editionDropdownOpen && (
@@ -207,32 +215,8 @@ export const TopBar = ({
         )}
       </div>
 
-      {/* Right Zone: Database Status, Quick Actions & Profile */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        {/* Live Database Connection Status Trigger (Restricted Exclusively to Admin / Organizer) */}
-        {currentUser?.role === 'organizer' && (
-          <button
-            type="button"
-            onClick={onOpenDatabaseModal}
-            className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 min-h-[38px] rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
-              isDbConnected
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 shadow-2xs'
-                : 'bg-amber-50/90 border-amber-300 text-amber-900 hover:bg-amber-100 shadow-2xs'
-            }`}
-            title="Admin Console: Inspect Supabase PostgreSQL connection & diagnostic status"
-          >
-            <span className={`w-2 h-2 rounded-full shrink-0 ${
-              isDbConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-            }`} />
-            <Database className={`w-3.5 h-3.5 shrink-0 ${isDbConnected ? 'text-emerald-700' : 'text-amber-700'}`} />
-            <span className="hidden md:inline font-mono text-[11px]">
-              {isDbConnected ? 'Supabase: Live' : 'DB: Local Mode'}
-            </span>
-            <span className="md:hidden font-mono text-[11px]">
-              {isDbConnected ? 'Live' : 'Local'}
-            </span>
-          </button>
-        )}
+      {/* Right Zone: Quick Actions & Profile */}
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
 
         {/* Quick Actions Dropdown */}
         <div className="relative">
@@ -389,6 +373,21 @@ export const TopBar = ({
                 </div>
 
                 <div className="p-2 space-y-1 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setRoleDropdownOpen(false);
+                      onOpenDatabaseModal?.();
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-semibold flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Database className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Database Connection & Health</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                      {isDbConnected ? 'Connected' : 'Local'}
+                    </span>
+                  </button>
                   <button
                     onClick={() => {
                       setRoleDropdownOpen(false);
