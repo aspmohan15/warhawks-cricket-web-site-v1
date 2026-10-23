@@ -64,6 +64,7 @@ export const Sidebar = ({
         { id: 'registrations', label: 'Tournament Registration', icon: UserPlus, badge: 'Apply' },
         { id: 'teams_players', label: 'Teams & Squads', icon: Users },
         { id: 'auction', label: 'Auction Live Viewer', icon: Gavel, badge: 'Live' },
+        { id: 'sponsorships', label: 'Sponsors & Partners', icon: BadgePercent },
         { id: 'rules_videos', label: 'Rules & Demo Videos', icon: BookOpenCheck }
       ];
 

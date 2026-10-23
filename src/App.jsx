@@ -220,6 +220,7 @@ export default function App() {
       'registrations',
       'teams_players',
       'auction',
+      'sponsorships',
       'rules_videos'
     ];
     if (role === 'player' && !playerAllowedSections.includes(currentSection)) {
@@ -264,6 +265,8 @@ export default function App() {
       setCurrentSection('fixtures_results');
     } else if (action === 'view_standings') {
       setCurrentSection('standings');
+    } else if (action === 'view_sponsors') {
+      setCurrentSection('sponsorships');
     }
   };
 
@@ -752,6 +755,7 @@ export default function App() {
                 <SponsorshipView
                   tournament={activeTournament}
                   sponsors={sponsors}
+                  currentUser={currentUser}
                   onCreateSponsor={handleCreateSponsor}
                   onUpdateSponsor={handleUpdateSponsor}
                   onDeleteSponsor={handleDeleteSponsor}
