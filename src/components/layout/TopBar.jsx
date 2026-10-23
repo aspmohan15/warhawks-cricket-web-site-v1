@@ -15,7 +15,8 @@ import {
   Lock,
   Database,
   KeyRound,
-  BadgePercent
+  BadgePercent,
+  Globe
 } from 'lucide-react';
 import { WARHAWKS_LOGO_URL } from '../../constants';
 
@@ -104,7 +105,7 @@ export const TopBar = ({
 
   const roles = [
     { id: 'organizer', label: 'Organizer', desc: 'Warhawks full operational control across all modules' },
-    { id: 'player', label: 'Player', desc: 'Browse tournaments, view scorecards, standings & register' }
+    { id: 'player', label: 'Public Visitor', desc: 'Browse tournament fixtures, points table, public sponsors & registration' }
   ];
 
   return (
@@ -238,9 +239,9 @@ export const TopBar = ({
           {quickActionOpen && (
             <div className="fixed inset-x-3 top-16 mt-1 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 max-w-sm sm:max-w-none bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs">
               <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
-                <span>{currentUser.role === 'organizer' ? 'Organizer Actions' : 'Player Quick Links'}</span>
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${currentUser.role === 'organizer' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
-                  {currentUser.role === 'organizer' ? 'Host' : 'Athlete'}
+                <span>{currentUser.role === 'organizer' ? 'Organizer Actions' : 'Public Visitor Quick Links'}</span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${currentUser.role === 'organizer' ? 'bg-emerald-50 text-emerald-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                  {currentUser.role === 'organizer' ? 'Host' : 'Public'}
                 </span>
               </div>
               {currentUser.role === 'organizer' ? (
@@ -431,8 +432,9 @@ export const TopBar = ({
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="hidden md:inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 text-slate-600 text-[11px] font-medium">
-              <span>Public Player Portal</span>
+            <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold border border-slate-200">
+              <Globe className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Public Visitor Portal</span>
             </span>
 
             <button

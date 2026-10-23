@@ -21,7 +21,10 @@ import {
   Users,
   Coffee,
   QrCode,
-  Copy
+  Copy,
+  BadgePercent,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { DEFAULT_WARHAWKS_UPI } from '../../services/supabaseStorage';
@@ -36,13 +39,15 @@ import {
 export const RegistrationView = ({
   tournament,
   registrations,
+  sponsors = [],
   currentUser,
   onToggleRegistration,
   onUpdateRegistrationDates,
   onUpdateStatus,
   onPlayerRegister,
   onCancelRegistration,
-  onNavigateToEditions
+  onNavigateToEditions,
+  onNavigateToSponsors
 }) => {
   const isOrganizer = currentUser?.role === 'organizer';
 
@@ -1041,6 +1046,82 @@ export const RegistrationView = ({
               )}
             </div>
           )}
+
+          {/* Public Tournament Sponsors & Official Partners Showcase */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200">
+                  <BadgePercent className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900">Official Tournament Sponsors & Partners</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded font-mono">Public Directory</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Proud commercial partners and supporters backing {tournament?.name} (Organized by Warhawks).
+                  </p>
+                </div>
+              </div>
+
+              {onNavigateToSponsors && (
+                <button
+                  type="button"
+                  onClick={onNavigateToSponsors}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>View All Sponsors ({sponsors?.length || 0})</span>
+                </button>
+              )}
+            </div>
+
+            {sponsors && sponsors.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {sponsors.slice(0, 6).map(sp => (
+                  <div
+                    key={sp.id}
+                    onClick={onNavigateToSponsors}
+                    className="p-3.5 rounded-xl bg-slate-50 hover:bg-emerald-50/50 border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center justify-between gap-2.5 cursor-pointer group"
+                  >
+                    <div className="min-w-0 pr-1">
+                      <span className="text-[10px] font-bold text-emerald-700 uppercase font-mono block truncate">
+                        {sp.tier || 'Official Partner'}
+                      </span>
+                      <h4 className="text-xs font-bold text-slate-900 truncate mt-0.5 group-hover:text-emerald-900 transition-colors">
+                        {sp.name}
+                      </h4>
+                      {sp.contactNumber && (
+                        <span className="text-[11px] text-slate-500 font-mono block mt-0.5 truncate">{sp.contactNumber}</span>
+                      )}
+                    </div>
+                    {sp.websiteUrl ? (
+                      <a
+                        href={sp.websiteUrl.startsWith('http') ? sp.websiteUrl : `https://${sp.websiteUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="p-1.5 rounded-md bg-white border border-slate-200 text-slate-400 hover:text-emerald-700 hover:border-emerald-300 transition-colors shrink-0"
+                        title="Visit sponsor website"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100/60 px-2 py-0.5 rounded shrink-0">
+                        Partner
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-4 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <p className="font-semibold text-slate-700">Official tournament sponsors will appear here.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Anyone visiting this portal can inspect sponsor benefits, contact records, and partnerships.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

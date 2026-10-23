@@ -27,6 +27,16 @@ import { getOrganizerSession, logoutOrganizer } from './services/auth';
 import { isSupabaseConfigured } from './services/supabase';
 import { WARHAWKS_LOGO_URL } from './constants';
 
+const PUBLIC_ALLOWED_SECTIONS = [
+  'sponsorships',
+  'fixtures_results',
+  'standings',
+  'registrations',
+  'teams_players',
+  'auction',
+  'rules_videos'
+];
+
 export default function App() {
   const organizerSession = getOrganizerSession();
 
@@ -48,14 +58,14 @@ export default function App() {
     return list.length > 0 ? list[0].id : null;
   });
 
-  // Current user: authenticated organizer if session exists; otherwise public player without an account
+  // Current user: authenticated organizer if session exists; otherwise public visitor without an account
   const [currentUser, setCurrentUser] = useState(() => {
     if (organizerSession && organizerSession.user) {
       return organizerSession.user;
     }
     return {
       id: 'public-visitor',
-      name: 'Public Player',
+      name: 'Public Visitor',
       role: 'player',
       email: ''
     };
@@ -214,17 +224,8 @@ export default function App() {
       role
     };
     setCurrentUser(u);
-    const playerAllowedSections = [
-      'fixtures_results',
-      'standings',
-      'registrations',
-      'teams_players',
-      'auction',
-      'sponsorships',
-      'rules_videos'
-    ];
-    if (role === 'player' && !playerAllowedSections.includes(currentSection)) {
-      setCurrentSection('fixtures_results');
+    if (role === 'player' && !PUBLIC_ALLOWED_SECTIONS.includes(currentSection)) {
+      setCurrentSection('sponsorships');
     }
     showToast(`Session authority updated: ${role.toUpperCase()}`, 'info');
   };
@@ -241,12 +242,12 @@ export default function App() {
     logoutOrganizer();
     setCurrentUser({
       id: 'public-visitor',
-      name: 'Public Player',
+      name: 'Public Visitor',
       role: 'player',
       email: ''
     });
     setCurrentSection('registrations');
-    showToast('Logged out of organizer session. Public player portal active.', 'info');
+    showToast('Logged out of organizer session. Public visitor portal active.', 'info');
   };
 
   // Quick Action Handler from Topbar
@@ -638,7 +639,7 @@ export default function App() {
         {/* Viewport Content Canvas */}
         <main className="flex-1 px-3 py-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0">
           {currentUser.role === 'player' &&
-          !['fixtures_results', 'standings', 'registrations', 'teams_players', 'auction', 'rules_videos'].includes(currentSection) ? (
+          !PUBLIC_ALLOWED_SECTIONS.includes(currentSection) ? (
             <div className="bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center max-w-xl mx-auto shadow-xs my-8">
               <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl mx-auto mb-4 font-bold shadow-xs">
                 🔒
@@ -795,12 +796,14 @@ export default function App() {
                 <RegistrationView
                   tournament={activeTournament}
                   registrations={registrations}
+                  sponsors={sponsors}
                   currentUser={currentUser}
                   onToggleRegistration={handleToggleRegistration}
                   onUpdateRegistrationDates={handleUpdateRegistrationDates}
                   onUpdateStatus={handleUpdateRegistrationStatus}
                   onPlayerRegister={handlePlayerRegister}
                   onCancelRegistration={handleCancelRegistration}
+                  onNavigateToSponsors={() => setCurrentSection('sponsorships')}
                 />
               )}
 

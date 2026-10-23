@@ -104,15 +104,15 @@ export const SponsorshipView = ({
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-semibold mb-1 border border-emerald-200">
             <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
-            <span>{isOrganizer ? 'Warhawks Corporate Partnerships' : 'Warhawks Official Partners'}</span>
+            <span>{isOrganizer ? 'Warhawks Corporate Partnerships' : 'Public Directory'}</span>
           </div>
           <h1 className="text-xl font-bold text-slate-900">
-            {isOrganizer ? 'Sponsorship Management' : 'Tournament Sponsors & Partners'}
+            {isOrganizer ? 'Sponsorship Management' : 'Official Tournament Sponsors & Partners'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {isOrganizer
               ? `Manage sponsor partners, contact records, financial commitments, and website visibility for ${tournament?.name} (Organized by Warhawks).`
-              : `Official commercial sponsors, corporate partners, and tournament benefactors supporting ${tournament?.name}.`}
+              : `Proud commercial partners and supporters backing ${tournament?.name} (Organized by Warhawks).`}
           </p>
         </div>
 
@@ -143,19 +143,38 @@ export const SponsorshipView = ({
               </button>
             </>
           ) : (
-            <>
-              <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-center">
-                <span className="text-emerald-700 font-medium">Official Partners: </span>
-                <span className="font-bold font-mono text-emerald-900">{visibleSponsors.length}</span>
-              </div>
-              <div className="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                <span className="font-medium">Read-Only View</span>
-              </div>
-            </>
+            <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-center">
+              <span className="text-emerald-700 font-medium">Official Partners: </span>
+              <span className="font-bold font-mono text-emerald-900">{visibleSponsors.length}</span>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Public Sponsor Showcase Banner for Visitors */}
+      {!isOrganizer && (
+        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white rounded-xl p-4 sm:p-5 border border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shrink-0">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white">Public Tournament Sponsor Showcase</h2>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded font-mono">Public</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Anyone visiting this site can freely explore official sponsors, brand partnerships, and contact details for {tournament?.name}.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-mono text-emerald-300 font-bold bg-emerald-950/80 px-2.5 py-1 rounded border border-emerald-700/50">
+              {visibleSponsors.length} Verified Partners
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Sponsors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

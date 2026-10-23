@@ -59,12 +59,12 @@ export const Sidebar = ({
         { id: 'settings', label: 'Settings & Integrations', icon: Settings }
       ]
     : [
+        { id: 'sponsorships', label: 'Sponsors & Partners', icon: BadgePercent, badge: 'Public' },
         { id: 'fixtures_results', label: 'Fixtures & Scores', icon: Calendar },
         { id: 'standings', label: 'Points Table & NRR', icon: ListOrdered },
-        { id: 'registrations', label: 'Tournament Registration', icon: UserPlus, badge: 'Apply' },
         { id: 'teams_players', label: 'Teams & Squads', icon: Users },
+        { id: 'registrations', label: 'Player Registration', icon: UserPlus, badge: 'Apply' },
         { id: 'auction', label: 'Auction Live Viewer', icon: Gavel, badge: 'Live' },
-        { id: 'sponsorships', label: 'Sponsors & Partners', icon: BadgePercent },
         { id: 'rules_videos', label: 'Rules & Demo Videos', icon: BookOpenCheck }
       ];
 
