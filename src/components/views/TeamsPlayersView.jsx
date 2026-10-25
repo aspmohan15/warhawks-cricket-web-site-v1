@@ -422,7 +422,7 @@ export const TeamsPlayersView = ({
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="font-medium text-slate-500">Purse Utilization</span>
                     <span className="font-mono font-bold text-slate-900">
-                      ₹{(team.budgetSpent / 100000).toFixed(1)}L / ₹{(team.budgetTotal / 100000).toFixed(1)}L
+                      ₹{team.budgetSpent.toLocaleString()} / ₹{team.budgetTotal.toLocaleString()}
                     </span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
@@ -434,7 +434,7 @@ export const TeamsPlayersView = ({
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1 font-mono">
-                    <span>Remaining: ₹{(team.budgetRemaining / 100000).toFixed(1)}L</span>
+                    <span>Remaining: ₹{team.budgetRemaining.toLocaleString()}</span>
                     <span>{budgetPercent}% spent</span>
                   </div>
                 </div>
@@ -477,7 +477,7 @@ export const TeamsPlayersView = ({
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="text-[11px] font-mono text-slate-600">
-                              {player.soldPrice ? `₹${(player.soldPrice / 100000).toFixed(1)}L` : 'Base'}
+                              {player.soldPrice ? `₹${player.soldPrice.toLocaleString()}` : 'Base'}
                             </span>
                             <span className="text-[10px] text-slate-400 font-medium">{player.role}</span>
                           </div>
@@ -643,9 +643,9 @@ export const TeamsPlayersView = ({
                         <span className="text-[10px] text-slate-400 uppercase font-medium block">Auction Price</span>
                         <div className="font-mono text-slate-800 font-bold">
                           {player.soldPrice ? (
-                            <span className="text-emerald-700">₹{(player.soldPrice / 100000).toFixed(1)}L Sold</span>
+                            <span className="text-emerald-700">₹{player.soldPrice.toLocaleString()} Sold</span>
                           ) : (
-                            <span>₹{(player.basePrice / 100000).toFixed(1)}L Base</span>
+                            <span>₹{(player.basePrice || 0).toLocaleString()} Base</span>
                           )}
                         </div>
                       </div>
@@ -750,11 +750,11 @@ export const TeamsPlayersView = ({
 
                           <td className="py-3 px-4 font-mono">
                             <div className="text-slate-800 font-bold">
-                              ₹{(player.basePrice / 100000).toFixed(1)}L Base
+                              ₹{(player.basePrice || 0).toLocaleString()} Base
                             </div>
                             {player.soldPrice ? (
                               <div className="text-[11px] text-emerald-600 font-semibold">
-                                Sold: ₹{(player.soldPrice / 100000).toFixed(1)}L
+                                Sold: ₹{player.soldPrice.toLocaleString()}
                               </div>
                             ) : (
                               <div className="text-[11px] text-slate-400">Unsold</div>

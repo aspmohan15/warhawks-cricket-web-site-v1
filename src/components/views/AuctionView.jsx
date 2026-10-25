@@ -69,7 +69,7 @@ export const AuctionView = ({
       return;
     }
     onFinalizeSale(activePlayer.id, auctionConfig.currentLeadingTeamId, currentBid);
-    setBidStatusMessage({ text: `HAMMER DOWN! Sold to ${leadingTeam?.name} for ₹${(currentBid / 100000).toFixed(1)}L!`, error: false });
+    setBidStatusMessage({ text: `HAMMER DOWN! Sold to ${leadingTeam?.name} for ₹${currentBid.toLocaleString()}!`, error: false });
     // Pick next available player automatically
     const nextP = availablePlayers.find(p => p.id !== activePlayer.id);
     if (nextP) {
@@ -166,14 +166,14 @@ export const AuctionView = ({
                   <optgroup label="Available Pool">
                     {availablePlayers.map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.name} ({p.role} · Base ₹{(p.basePrice / 100000).toFixed(1)}L)
+                        {p.name} ({p.role} · Base ₹{(p.basePrice || 0).toLocaleString()})
                       </option>
                     ))}
                   </optgroup>
                   <optgroup label="Unsold Pool">
                     {unsoldPlayers.map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.name} (Unsold · Base ₹{(p.basePrice / 100000).toFixed(1)}L)
+                        {p.name} (Unsold · Base ₹{(p.basePrice || 0).toLocaleString()})
                       </option>
                     ))}
                   </optgroup>
@@ -192,7 +192,7 @@ export const AuctionView = ({
                     ₹{currentBid.toLocaleString()}
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
-                    ({(currentBid / 100000).toFixed(1)} Lakh Pts)
+                    ({(currentBid || 0).toLocaleString()} Pts)
                   </span>
                 </div>
                 <div className="text-xs text-slate-300 font-semibold mt-1">
@@ -287,7 +287,7 @@ export const AuctionView = ({
                           <span className="font-bold text-slate-200 truncate">{team.shortCode}</span>
                         </div>
                         <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                          ₹{(team.budgetRemaining / 100000).toFixed(1)}L
+                          ₹{team.budgetRemaining.toLocaleString()}
                         </span>
                       </div>
 
@@ -389,7 +389,7 @@ export const AuctionView = ({
                         <span className="text-slate-900">{team.name}</span>
                       </div>
                       <span className="font-mono font-bold text-emerald-700">
-                        ₹{(team.budgetRemaining / 100000).toFixed(1)}L Rem.
+                        ₹{team.budgetRemaining.toLocaleString()} Rem.
                       </span>
                     </div>
 
@@ -401,7 +401,7 @@ export const AuctionView = ({
                     </div>
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                      <span>Spent: ₹{(team.budgetSpent / 100000).toFixed(1)}L</span>
+                      <span>Spent: ₹{team.budgetSpent.toLocaleString()}</span>
                       <span>Squad: {team.totalPlayersAssigned}/{tournament?.maxSquadSize || 18}</span>
                     </div>
                   </div>
@@ -430,7 +430,7 @@ export const AuctionView = ({
                   >
                     <div>
                       <span className="font-semibold text-slate-800">{p.name}</span>
-                      <span className="text-[11px] text-slate-400 block">{p.role} · Base ₹{(p.basePrice / 100000).toFixed(1)}L</span>
+                      <span className="text-[11px] text-slate-400 block">{p.role} · Base ₹{(p.basePrice || 0).toLocaleString()}</span>
                     </div>
                     <button
                       onClick={() => handleSelectNewPlayer(p.id)}

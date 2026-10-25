@@ -82,7 +82,7 @@ export const DashboardView = ({
     {
       label: 'Active Sponsors',
       value: sponsors.length,
-      subtext: `₹${(totalSponsorSum / 100000).toFixed(1)}L committed`,
+      subtext: `₹${totalSponsorSum.toLocaleString()} committed`,
       icon: BadgePercent,
       color: 'text-sky-600',
       bgColor: 'bg-sky-50',
@@ -90,7 +90,7 @@ export const DashboardView = ({
     },
     {
       label: 'Total Expenses',
-      value: `₹${(totalExpenseSum / 100000).toFixed(2)}L`,
+      value: `₹${totalExpenseSum.toLocaleString()}`,
       subtext: `${expenses.length} ledger vouchers recorded`,
       icon: Receipt,
       color: 'text-rose-600',
@@ -108,7 +108,7 @@ export const DashboardView = ({
     },
     {
       label: 'Operating Delta',
-      value: `₹${((totalSponsorSum - totalExpenseSum) / 100000).toFixed(2)}L`,
+      value: `₹${(totalSponsorSum - totalExpenseSum).toLocaleString()}`,
       subtext: 'Sponsorships less expenses',
       icon: TrendingUp,
       color: totalSponsorSum >= totalExpenseSum ? 'text-emerald-600' : 'text-rose-600',

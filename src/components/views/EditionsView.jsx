@@ -242,7 +242,7 @@ export const EditionsView = ({
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-medium block">Team Purse Cap</span>
                   <span className="text-slate-800 font-mono font-medium block">
-                    {(edition.totalBudgetPointsPerTeam / 100000).toFixed(0)} Lakh Pts
+                    {(edition.totalBudgetPointsPerTeam || 0).toLocaleString()} Pts
                   </span>
                 </div>
                 <div>
@@ -388,7 +388,7 @@ export const EditionsView = ({
                     </td>
 
                     <td className="py-3.5 px-4 font-mono font-medium text-slate-700">
-                      {(edition.totalBudgetPointsPerTeam / 100000).toFixed(0)} Lakh Pts
+                      {(edition.totalBudgetPointsPerTeam || 0).toLocaleString()} Pts
                     </td>
 
                     <td className="py-3.5 px-4">

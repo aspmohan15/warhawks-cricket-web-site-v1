@@ -122,7 +122,7 @@ export const SponsorshipView = ({
             <>
               <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-center">
                 <span className="text-emerald-700 font-medium">Committed: </span>
-                <span className="font-bold font-mono text-emerald-900">₹{(totalCommitted / 100000).toFixed(1)}L</span>
+                <span className="font-bold font-mono text-emerald-900">₹{totalCommitted.toLocaleString()}</span>
               </div>
               <button
                 onClick={() => {

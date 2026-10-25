@@ -205,9 +205,6 @@ export const ExpensesView = ({
             <span className="text-2xl font-bold font-mono text-slate-900">
               ₹{totalExpenseSum.toLocaleString()}
             </span>
-            <span className="text-xs font-mono text-slate-500">
-              (₹{(totalExpenseSum / 100000).toFixed(2)}L)
-            </span>
           </div>
         </div>
 
@@ -258,7 +255,7 @@ export const ExpensesView = ({
             <div key={cat.category} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-xs">
               <div className="flex items-center justify-between font-semibold text-slate-800 gap-2">
                 <span className="truncate">{cat.category}</span>
-                <span className="font-mono text-slate-900 shrink-0">₹{(cat.total / 1000).toFixed(0)}k</span>
+                <span className="font-mono text-slate-900 shrink-0">₹{cat.total.toLocaleString()}</span>
               </div>
               <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden my-1.5">
                 <div
