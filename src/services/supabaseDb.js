@@ -307,6 +307,16 @@ const mapAnnouncementFromDb = (row) => ({
 export const supabaseDb = {
   // Tournaments
   async getTournaments() {
+    try {
+      const res = await fetch('/api/tournaments');
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          return rows.map(mapTournamentFromDb);
+        }
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 

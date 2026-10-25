@@ -123,15 +123,14 @@ class TournamentDatabase {
     this.saveToStorage();
   }
 
-  // Supabase Background Sync
+  // Server & Supabase Background Sync
   async initSupabaseSync() {
-    if (!isSupabaseConfigured()) return;
     try {
       const [remoteTournaments, remoteAnnouncements] = await Promise.all([
         supabaseDb.getTournaments().catch(() => null),
         supabaseDb.getAnnouncements().catch(() => null)
       ]);
-      if (remoteTournaments !== null) {
+      if (remoteTournaments !== null && remoteTournaments.length > 0) {
         this.schema.tournaments = remoteTournaments;
       }
       if (remoteAnnouncements !== null) {
@@ -139,12 +138,12 @@ class TournamentDatabase {
       }
       this.saveToStorage();
     } catch (err) {
-      console.warn('Supabase initial fetch notice:', err.message);
+      console.warn('Backend initial fetch notice:', err.message);
     }
   }
 
   async syncTournamentData(tournamentId) {
-    if (!isSupabaseConfigured() || !tournamentId) return;
+    if (!tournamentId) return;
     try {
       const [remoteTournaments, remoteTeams, remotePlayers, remoteMatches, remoteSponsors, remoteRegistrations, remoteExpenses, remoteRules, remoteAuctionConfig, remoteAuctionBids, remoteAnnouncements] = await Promise.all([
         supabaseDb.getTournaments().catch(() => null),

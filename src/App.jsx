@@ -144,27 +144,25 @@ export default function App() {
 
   useEffect(() => {
     refreshTournamentData(activeTournamentId);
-    if (activeTournamentId && isSupabaseConfigured()) {
+    if (activeTournamentId) {
       db.syncTournamentData(activeTournamentId).then(() => {
         refreshTournamentData(activeTournamentId);
       });
     }
   }, [activeTournamentId]);
 
-  // Initial cloud sync on mount
+  // Initial cloud & backend sync on mount for any browser
   useEffect(() => {
-    if (isSupabaseConfigured()) {
-      db.initSupabaseSync().then(() => {
-        const list = db.getTournaments();
-        setTournaments(list);
-        if (list.length > 0 && !activeTournamentId) {
-          setActiveTournamentId(list[0].id);
-          db.syncTournamentData(list[0].id).then(() => {
-            refreshTournamentData(list[0].id);
-          });
-        }
-      });
-    }
+    db.initSupabaseSync().then(() => {
+      const list = db.getTournaments();
+      setTournaments(list);
+      if (list.length > 0 && !activeTournamentId) {
+        setActiveTournamentId(list[0].id);
+        db.syncTournamentData(list[0].id).then(() => {
+          refreshTournamentData(list[0].id);
+        });
+      }
+    });
   }, []);
 
   // Synchronize database connection state
