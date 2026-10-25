@@ -246,8 +246,8 @@ export const UserAccessView = ({
     { capability: 'Fixtures Scheduling & Venue Pitch Allocations', organizer: true, player: false, description: 'Setting match timing, rounds, and ground conditions' },
     { capability: 'Live Scorecard Entry & Result Sign-Off', organizer: true, player: false, description: 'Real-time ball-by-ball score entry and outcome publication' },
     { capability: 'Live Auctioneer Podium Hammer & Bidding', organizer: true, player: false, description: 'Managing auction ring, bidding increments, and hammer drops' },
-    { capability: 'Sponsorship Partnerships & Corporate Agreements', organizer: true, player: false, description: 'Tiered sponsorship contracts and banner placements' },
-    { capability: 'Expense Ledger Disbursements & Budget Auditing', organizer: true, player: false, description: 'Recording tournament payouts, ground fees, and vendor receipts' },
+    { capability: 'Expense Voucher Creation & Record Deletion', organizer: true, player: false, description: 'Disbursing tournament payouts, entering receipts, and modifying ledger records' },
+    { capability: 'Tournament Expense Ledger (View-Only Transparency)', organizer: true, player: true, description: 'View financial disbursements, advance payments, category allocation, and export CSV' },
     { capability: 'Catering Logistics & Dietary Orders Distribution', organizer: true, player: false, description: 'Managing nutritional rosters and buffet vouchers' },
     { capability: 'Rules Articles & Playing Conditions Publishing', organizer: true, player: false, description: 'Codifying tournament policies and video walkthroughs' },
     { capability: 'Browse Published Tournaments, Schedules & Venues', organizer: true, player: true, description: 'View current and upcoming championship details' },
@@ -774,7 +774,7 @@ export const UserAccessView = ({
                 matrixFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              All (20)
+              All ({permissionsMatrix.length})
             </button>
             <button
               type="button"

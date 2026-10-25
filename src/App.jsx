@@ -35,6 +35,7 @@ const PUBLIC_ALLOWED_SECTIONS = [
   'registrations',
   'teams_players',
   'auction',
+  'expenses',
   'rules_videos'
 ];
 
@@ -272,6 +273,8 @@ export default function App() {
       setCurrentSection('standings');
     } else if (action === 'view_sponsors') {
       setCurrentSection('sponsorships');
+    } else if (action === 'view_expenses') {
+      setCurrentSection('expenses');
     }
   };
 
@@ -838,6 +841,8 @@ export default function App() {
                 <ExpensesView
                   tournament={activeTournament}
                   expenses={expenses}
+                  currentUser={currentUser}
+                  isOrganizer={currentUser?.role === 'organizer'}
                   onCreateExpense={handleCreateExpense}
                   onDeleteExpense={handleDeleteExpense}
                 />

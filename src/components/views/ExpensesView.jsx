@@ -10,7 +10,8 @@ import {
   PieChart,
   Calendar,
   Building2,
-  CreditCard
+  CreditCard,
+  Eye
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { exportToCsv } from '../../utils/csv';
@@ -19,9 +20,12 @@ import { EXPENSE_CATEGORIES, WARHAWKS_LOGO_URL } from '../../constants';
 export const ExpensesView = ({
   tournament,
   expenses,
+  currentUser,
+  isOrganizer: isOrganizerProp,
   onCreateExpense,
   onDeleteExpense
 }) => {
+  const isOrganizer = isOrganizerProp ?? (currentUser?.role === 'organizer');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -173,27 +177,34 @@ export const ExpensesView = ({
             <Download className="w-3.5 h-3.5" />
             <span>Export (CSV)</span>
           </button>
-          <button
-            onClick={() => {
-              setForm({
-                title: '',
-                category: 'Ground & Pitch',
-                amount: '',
-                advanceAmount: '',
-                date: new Date().toISOString().split('T')[0],
-                vendorName: '',
-                paymentMode: 'Bank Transfer',
-                paymentStatus: 'paid',
-                notes: '',
-                receiptUrl: ''
-              });
-              setCreateModalOpen(true);
-            }}
-            className="flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Record Expense</span>
-          </button>
+          {isOrganizer ? (
+            <button
+              onClick={() => {
+                setForm({
+                  title: '',
+                  category: 'Ground & Pitch',
+                  amount: '',
+                  advanceAmount: '',
+                  date: new Date().toISOString().split('T')[0],
+                  vendorName: '',
+                  paymentMode: 'Bank Transfer',
+                  paymentStatus: 'paid',
+                  notes: '',
+                  receiptUrl: ''
+                });
+                setCreateModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Record Expense</span>
+            </button>
+          ) : (
+            <div className="flex items-center justify-center gap-1.5 px-3 py-2 min-h-[38px] rounded-lg bg-slate-100 text-slate-600 border border-slate-200 text-xs font-medium">
+              <Eye className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>View-Only Ledger</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -342,17 +353,19 @@ export const ExpensesView = ({
 
                 <div className="flex items-center gap-2">
                   <span className="text-slate-500 text-[11px]">{expense.paymentMode}</span>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Delete expense record "${expense.title}"?`)) {
-                        onDeleteExpense(expense.id);
-                      }
-                    }}
-                    className="min-w-[34px] min-h-[34px] p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer"
-                    aria-label="Delete Expense"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {isOrganizer && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete expense record "${expense.title}"?`)) {
+                          onDeleteExpense(expense.id);
+                        }
+                      }}
+                      className="min-w-[34px] min-h-[34px] p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer"
+                      aria-label="Delete Expense"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -374,13 +387,13 @@ export const ExpensesView = ({
                 <th className="py-3 px-4 text-right">Total (₹)</th>
                 <th className="py-3 px-4 text-right">Advance (₹)</th>
                 <th className="py-3 px-4 text-right">Balance (₹)</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                {isOrganizer && <th className="py-3 px-4 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredExpenses.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-slate-400">
+                  <td colSpan={isOrganizer ? 9 : 8} className="text-center py-8 text-slate-400">
                     {expenses.length === 0 ? 'No expense vouchers recorded yet.' : 'No expenses found matching filter.'}
                   </td>
                 </tr>
@@ -432,19 +445,21 @@ export const ExpensesView = ({
                     ₹{Math.max(0, expense.amount - (Number(expense.advanceAmount) || 0)).toLocaleString()}
                   </td>
 
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => {
-                        if (confirm(`Delete expense record "${expense.title}"?`)) {
-                          onDeleteExpense(expense.id);
-                        }
-                      }}
-                      className="p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                      title="Delete expense"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
+                  {isOrganizer && (
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete expense record "${expense.title}"?`)) {
+                            onDeleteExpense(expense.id);
+                          }
+                        }}
+                        className="p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Delete expense"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -452,13 +467,14 @@ export const ExpensesView = ({
         </div>
       </div>
 
-      {/* Record Expense Modal */}
-      <Modal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Record Tournament Expense Voucher"
-        subtitle={`Disbursement ledger entry for ${tournament?.name || 'Tournament Edition'}`}
-      >
+      {/* Record Expense Modal (Organizer Only) */}
+      {isOrganizer && (
+        <Modal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          title="Record Tournament Expense Voucher"
+          subtitle={`Disbursement ledger entry for ${tournament?.name || 'Tournament Edition'}`}
+        >
         <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
@@ -590,6 +606,7 @@ export const ExpensesView = ({
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 };

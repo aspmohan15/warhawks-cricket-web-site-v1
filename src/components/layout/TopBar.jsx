@@ -328,6 +328,16 @@ export const TopBar = ({
                   </button>
                   <button
                     onClick={() => {
+                      onQuickAction('view_expenses');
+                      setQuickActionOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2.5 flex items-center gap-2 hover:bg-slate-50 text-slate-700 cursor-pointer"
+                  >
+                    <Receipt className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>View Tournament Expenses</span>
+                  </button>
+                  <button
+                    onClick={() => {
                       onOpenOrganizerLogin();
                       setQuickActionOpen(false);
                     }}
