@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { changeAdminPassword } from '../../services/auth';
 import { WARHAWKS_LOGO_URL } from '../../constants';
+import { formatPhoneNumber } from '../../utils/phone';
 
 export const ChangePasswordModal = ({
   isOpen,
@@ -114,7 +115,7 @@ export const ChangePasswordModal = ({
             />
             <div>
               <div className="font-bold text-slate-900">{currentUser?.name || 'Tournament Administrator'}</div>
-              <div className="text-[11px] text-slate-500 font-mono">{currentUser?.mobile}</div>
+              <div className="text-[11px] text-slate-500 font-mono">{formatPhoneNumber(currentUser?.mobile)}</div>
             </div>
           </div>
           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase">

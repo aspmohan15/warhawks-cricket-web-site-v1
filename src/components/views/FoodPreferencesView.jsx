@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { exportToCsv } from '../../utils/csv';
+import { formatPhoneNumber } from '../../utils/phone';
 import { FOOD_PREFERENCES, MEAL_TYPES, WARHAWKS_LOGO_URL } from '../../constants';
 
 export const FoodPreferencesView = ({
@@ -213,7 +214,7 @@ export const FoodPreferencesView = ({
       Tournament: tournament?.name || 'Tournament',
       'Athlete Name': r.fullName,
       Email: r.email,
-      Phone: r.phone,
+      Phone: r.phone ? formatPhoneNumber(r.phone) : '',
       'Registration Status': r.approvalStatus,
       'Athlete Diet': r.playerDiet,
       'Athlete Breakfast': r.playerHasBreakfast ? 'Yes' : 'No',
@@ -593,7 +594,7 @@ export const FoodPreferencesView = ({
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900">{item.fullName}</div>
                       <div className="text-[11px] text-slate-400 font-mono">{item.email}</div>
-                      <div className="text-[10px] text-slate-400">{item.phone} · {item.city}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{formatPhoneNumber(item.phone)} · {item.city}</div>
                     </td>
 
                     <td className="py-3.5 px-4">

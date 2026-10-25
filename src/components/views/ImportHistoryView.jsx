@@ -14,6 +14,7 @@ import {
 import { Modal } from '../common/Modal';
 import { parseCsv } from '../../utils/csv';
 import { WARHAWKS_LOGO_URL } from '../../constants';
+import { formatPhoneNumber } from '../../utils/phone';
 
 export const ImportHistoryView = ({
   tournament,
@@ -36,9 +37,9 @@ export const ImportHistoryView = ({
 
   // Sample Player Roster Template
   const samplePlayerCsv = `PlayerName,Role,BattingStyle,BowlingStyle,BasePrice,DietPreference,ShirtSize,City,Email,Phone
-Kishan Rawat,Batsman,Left-hand bat,Right-arm offbreak,400000,Veg,L,Mumbai,kishan.r@cricket.in,+91 98200 44112
-Prithvi Shaw,Batsman,Right-hand bat,Right-arm offbreak,600000,Non-Veg,M,Mumbai,prithvi.s@cricket.in,+91 98211 55223
-T Natarajan,Bowler,Left-hand bat,Left-arm fast,500000,Veg,XL,Salem,natarajan@cricket.in,+91 94433 22110`;
+Kishan Rawat,Batsman,Left-hand bat,Right-arm offbreak,400000,Veg,L,Mumbai,kishan.r@cricket.in,+919820044112
+Prithvi Shaw,Batsman,Right-hand bat,Right-arm offbreak,600000,Non-Veg,M,Mumbai,prithvi.s@cricket.in,+919821155223
+T Natarajan,Bowler,Left-hand bat,Left-arm fast,500000,Veg,XL,Salem,natarajan@cricket.in,+919443322110`;
 
   const handleParseContent = (text) => {
     const res = parseCsv(text);
@@ -111,7 +112,7 @@ T Natarajan,Bowler,Left-hand bat,Left-arm fast,500000,Veg,XL,Salem,natarajan@cri
         isCaptain: false,
         isOverseas: false,
         email: row.Email || `${(row.PlayerName || 'player').toLowerCase().replace(/\s+/g, '.')}@cricket.in`,
-        phone: row.Phone || '+91 98000 00000',
+        phone: formatPhoneNumber(row.Phone || '+919800000000'),
         city: row.City || tournament?.city || 'Mumbai',
         shirtSize: row.ShirtSize || 'L',
         foodPreference: row.DietPreference || 'Veg',

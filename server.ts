@@ -28,6 +28,7 @@ const normalizeMobile = (input: string | undefined): string => {
   if (!input) return '';
   const cleaned = String(input).replace(/[\s\-()]/g, '');
   if (/^[6-9]\d{9}$/.test(cleaned)) return `+91${cleaned}`;
+  if (/^0[6-9]\d{9}$/.test(cleaned)) return `+91${cleaned.slice(1)}`;
   if (/^91[6-9]\d{9}$/.test(cleaned)) return `+${cleaned}`;
   if (/^\+91[6-9]\d{9}$/.test(cleaned)) return cleaned;
   return cleaned;

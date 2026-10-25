@@ -2,6 +2,7 @@
 import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS } from '../constants';
 import { isSupabaseConfigured, getSupabaseClient } from './supabase';
 import { supabaseDb } from './supabaseDb';
+import { formatPhoneNumber } from '../utils/phone';
 
 const STORAGE_KEY = 'warhawks_tournament_db_v2';
 const LEGACY_KEY_V1 = 'warhawks_admin_db_v1';
@@ -411,6 +412,7 @@ class TournamentDatabase {
     const newPlayer = {
       ...data,
       id: data.id || `ply-${Date.now().toString(36)}`,
+      phone: data.phone ? formatPhoneNumber(data.phone) : '+919800000000',
       auctionStatus: data.teamId ? 'sold' : (data.auctionStatus || 'available'),
       foodPreference: data.foodPreference === 'Non-Veg' ? 'Non-Veg' : 'Veg',
       matchesPlayed: data.matchesPlayed || 0,
@@ -635,7 +637,7 @@ class TournamentDatabase {
     const newSponsor = {
       ...data,
       id: data.id || `sp-${Date.now().toString(36)}`,
-      contactNumber: data.contactNumber || '',
+      contactNumber: data.contactNumber ? formatPhoneNumber(data.contactNumber) : '',
       contributionAmount: Number(data.contributionAmount) || 0,
       tier: data.tier || 'Official Partner',
       isActive: data.isActive ?? true,
@@ -655,11 +657,15 @@ class TournamentDatabase {
   updateSponsor(id, updates) {
     const idx = (this.schema.sponsors || []).findIndex(s => s.id === id);
     if (idx === -1) throw new Error('Sponsor not found');
-    this.schema.sponsors[idx] = { ...this.schema.sponsors[idx], ...updates };
+    const cleanUpdates = {
+      ...updates,
+      ...(updates.contactNumber !== undefined ? { contactNumber: formatPhoneNumber(updates.contactNumber) } : {})
+    };
+    this.schema.sponsors[idx] = { ...this.schema.sponsors[idx], ...cleanUpdates };
     this.saveToStorage();
 
     if (isSupabaseConfigured()) {
-      supabaseDb.updateSponsor(id, updates).catch(err => console.warn('Supabase updateSponsor notice:', err.message));
+      supabaseDb.updateSponsor(id, cleanUpdates).catch(err => console.warn('Supabase updateSponsor notice:', err.message));
     }
     return this.schema.sponsors[idx];
   }
@@ -925,7 +931,7 @@ class TournamentDatabase {
       tournamentId: data.tournamentId,
       fullName: data.fullName,
       email: data.email,
-      phone: data.phone || '+91 98000 00000',
+      phone: formatPhoneNumber(data.phone || '+919800000000'),
       age: parseInt(data.age, 10) || 24,
       city: data.city || tournament.city,
       primaryRole: data.primaryRole || 'All-Rounder',

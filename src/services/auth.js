@@ -13,21 +13,12 @@ const DEFAULT_ORGANIZER_CREDENTIALS = {
   email: 'operations@warhawks.org'
 };
 
+import { formatPhoneNumber } from '../utils/phone';
+
+export { formatPhoneNumber };
+
 export const normalizeMobile = (input) => {
-  if (!input) return '';
-  // Strip spaces, dashes, parentheses
-  const cleaned = String(input).replace(/[\s\-()]/g, '');
-  // Normalize 10-digit Indian numbers to +91
-  if (/^[6-9]\d{9}$/.test(cleaned)) {
-    return `+91${cleaned}`;
-  }
-  if (/^91[6-9]\d{9}$/.test(cleaned)) {
-    return `+${cleaned}`;
-  }
-  if (/^\+91[6-9]\d{9}$/.test(cleaned)) {
-    return cleaned;
-  }
-  return cleaned;
+  return formatPhoneNumber(input);
 };
 
 // SHA-256 password hashing helper for client-side hashing before transmission

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { exportToCsv } from '../../utils/csv';
+import { formatPhoneNumber } from '../../utils/phone';
 
 export const TeamsPlayersView = ({
   tournament,
@@ -145,7 +146,7 @@ export const TeamsPlayersView = ({
       isWicketKeeper: Boolean(playerForm.isWicketKeeper),
       isOverseas: false,
       email: playerForm.email || `${(playerForm.name || 'player').toLowerCase().replace(/\s+/g, '.')}@crickethq.local`,
-      phone: playerForm.phone || '+91 98000 00000',
+      phone: formatPhoneNumber(playerForm.phone || '+919800000000'),
       city: playerForm.city || tournament?.city || 'Mumbai',
       shirtSize: playerForm.shirtSize || 'L',
       foodPreference: playerForm.foodPreference || 'Veg',
@@ -194,7 +195,7 @@ export const TeamsPlayersView = ({
         FoodPreference: p.foodPreference,
         ShirtSize: p.shirtSize,
         Email: p.email,
-        Phone: p.phone
+        Phone: p.phone ? formatPhoneNumber(p.phone) : ''
       };
     });
     exportToCsv(`${tournament?.name?.replace(/\s+/g, '_') || 'Tournament'}_Player_Roster`, rows);

@@ -103,7 +103,7 @@ export const OrganizerLoginModal = ({
                 autoFocus
                 value={mobile}
                 onChange={e => setMobile(e.target.value)}
-                placeholder="Enter registered mobile number"
+                placeholder="+919820012345"
                 className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs bg-white text-slate-900 transition-colors"
               />
             </div>

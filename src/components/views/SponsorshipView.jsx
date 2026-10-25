@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { WARHAWKS_LOGO_URL } from '../../constants';
+import { formatPhoneNumber } from '../../utils/phone';
 
 export const SponsorshipView = ({
   tournament,
@@ -57,7 +58,7 @@ export const SponsorshipView = ({
     onCreateSponsor({
       tournamentId: tournament?.id || '',
       name: form.name.trim(),
-      contactNumber: form.contactNumber.trim(),
+      contactNumber: formatPhoneNumber(form.contactNumber.trim()),
       contactEmail: form.contactEmail?.trim() || '',
       contributionAmount: cleanAmount,
       isActive: form.isActive,
@@ -83,7 +84,7 @@ export const SponsorshipView = ({
         ? sponsors.filter(s => s.displayOnPublicWeb !== false)
         : sponsors);
 
-  const overallCollectedAmount = visibleSponsors.reduce(
+  const overallCollectedAmount = sponsors.reduce(
     (acc, s) => acc + (Number(s.contributionAmount) || 0),
     0
   );
@@ -124,29 +125,23 @@ export const SponsorshipView = ({
         {/* Header Right Actions */}
         <div className="flex flex-col xs:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
           {isOrganizer ? (
-            <>
-              <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-center">
-                <span className="text-emerald-700 font-medium">Committed: </span>
-                <span className="font-bold font-mono text-emerald-900">₹{totalCommitted.toLocaleString()}</span>
-              </div>
-              <button
-                onClick={() => {
-                  setForm({
-                    name: '',
-                    contactNumber: '',
-                    contactEmail: '',
-                    contributionAmount: '',
-                    isActive: true,
-                    displayOnPublicWeb: true
-                  });
-                  setCreateModalOpen(true);
-                }}
-                className="flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Sponsor</span>
-              </button>
-            </>
+            <button
+              onClick={() => {
+                setForm({
+                  name: '',
+                  contactNumber: '',
+                  contactEmail: '',
+                  contributionAmount: '',
+                  isActive: true,
+                  displayOnPublicWeb: true
+                });
+                setCreateModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Sponsor</span>
+            </button>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-center">
@@ -162,34 +157,32 @@ export const SponsorshipView = ({
         </div>
       </div>
 
-      {/* Financial Overview Cards for Player Role */}
-      {!isOrganizer && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-            <span className="text-xs font-medium text-slate-500">Overall Collected Sponsorship</span>
-            <div className="mt-2 flex flex-wrap items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-emerald-700">
-                ₹{overallCollectedAmount.toLocaleString()}
-              </span>
-              <span className="text-xs font-mono text-slate-400">
-                total funding raised
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-            <span className="text-xs font-medium text-slate-500">Sponsor Partnerships</span>
-            <div className="mt-2 flex flex-wrap items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-slate-900">
-                {visibleSponsors.length}
-              </span>
-              <span className="text-xs font-mono text-slate-400">
-                contributing partners
-              </span>
-            </div>
+      {/* Financial Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <span className="text-xs font-medium text-slate-500">Overall Collected Sponsorship</span>
+          <div className="mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="text-2xl font-bold font-mono text-emerald-700">
+              ₹{overallCollectedAmount.toLocaleString()}
+            </span>
+            <span className="text-xs font-mono text-slate-400">
+              total funding raised
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <span className="text-xs font-medium text-slate-500">Sponsor Partnerships</span>
+          <div className="mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="text-2xl font-bold font-mono text-slate-900">
+              {visibleSponsors.length}
+            </span>
+            <span className="text-xs font-mono text-slate-400">
+              contributing partners
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Sponsors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -214,11 +207,6 @@ export const SponsorshipView = ({
               <div className="p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 pr-1">
-                    {isOrganizer && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-mono inline-block mb-1.5">
-                        {sponsor.tier || 'Tournament Sponsor'}
-                      </span>
-                    )}
                     <h3 className="font-bold text-base text-slate-900 truncate">{sponsor.name}</h3>
                   </div>
 
@@ -266,13 +254,13 @@ export const SponsorshipView = ({
                     <div className="flex items-center gap-2">
                       <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       {isOrganizer ? (
-                        <span className="font-mono font-medium text-slate-800">{sponsor.contactNumber}</span>
+                        <span className="font-mono font-medium text-slate-800">{formatPhoneNumber(sponsor.contactNumber)}</span>
                       ) : (
                         <a
-                          href={`tel:${sponsor.contactNumber}`}
+                          href={`tel:${formatPhoneNumber(sponsor.contactNumber)}`}
                           className="font-mono font-medium text-slate-800 hover:text-emerald-700 transition-colors"
                         >
-                          {sponsor.contactNumber}
+                          {formatPhoneNumber(sponsor.contactNumber)}
                         </a>
                       )}
                     </div>
@@ -381,7 +369,7 @@ export const SponsorshipView = ({
                 <input
                   type="tel"
                   required
-                  placeholder="+91 98200 12345"
+                  placeholder="+919820012345"
                   value={form.contactNumber}
                   onChange={e => setForm({ ...form, contactNumber: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"

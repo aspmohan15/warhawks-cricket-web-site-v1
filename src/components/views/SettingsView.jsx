@@ -21,6 +21,7 @@ import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS, WARHAWKS_LOGO_URL } from '..
 import { testSupabaseConnection, updateSupabaseConfig, getSupabaseConfig } from '../../services/supabase';
 import { uploadUpiQrToSupabase, DEFAULT_WARHAWKS_UPI } from '../../services/supabaseStorage';
 import { getStoredOrganizerCredentials, updateOrganizerCredentials } from '../../services/auth';
+import { formatPhoneNumber } from '../../utils/phone';
 
 export const SettingsView = ({
   settings,
@@ -74,7 +75,7 @@ export const SettingsView = ({
 
     // Save organizer credentials
     updateOrganizerCredentials({
-      mobile: organizerCreds.mobile,
+      mobile: organizerCreds.mobile ? formatPhoneNumber(organizerCreds.mobile) : organizerCreds.mobile,
       password: organizerCreds.passwordHash
     });
 
@@ -443,7 +444,7 @@ export const SettingsView = ({
                   type="tel"
                   value={organizerCreds.mobile || ''}
                   onChange={e => setOrganizerCreds({ ...organizerCreds, mobile: e.target.value })}
-                  placeholder="+91 98200 12345"
+                  placeholder="+919820012345"
                   className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
                 />
               </div>

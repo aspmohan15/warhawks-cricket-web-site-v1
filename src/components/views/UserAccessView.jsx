@@ -36,6 +36,7 @@ import {
   resetAdminPasswordByPrimary,
   normalizeMobile
 } from '../../services/auth';
+import { formatPhoneNumber } from '../../utils/phone';
 import { WARHAWKS_LOGO_URL } from '../../constants';
 
 export const UserAccessView = ({
@@ -310,7 +311,7 @@ export const UserAccessView = ({
                 {currentUser?.name || 'Active Session'}
               </div>
               <div className="text-[10px] text-slate-500 font-mono">
-                {currentUser?.mobile || 'Player Guest'}
+                {currentUser?.mobile ? formatPhoneNumber(currentUser.mobile) : 'Player Guest'}
               </div>
             </div>
           </div>
@@ -394,7 +395,7 @@ export const UserAccessView = ({
                 <div className="font-bold text-slate-900 flex flex-wrap items-center gap-1.5">
                   <span>Your Personal Password ({currentUser?.name})</span>
                   <span className="text-[10px] text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded font-mono font-semibold">
-                    {currentUser?.mobile}
+                    {formatPhoneNumber(currentUser?.mobile)}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
@@ -485,7 +486,7 @@ export const UserAccessView = ({
                         <Phone className="w-3.5 h-3.5 text-slate-400" />
                         <span>Phone / Login:</span>
                       </span>
-                      <span className="font-bold text-slate-900">{admin.mobile}</span>
+                      <span className="font-bold text-slate-900 font-mono">{formatPhoneNumber(admin.mobile)}</span>
                     </div>
 
                     {/* Actions Row (Thumb-Friendly for Mobile) */}
@@ -609,7 +610,7 @@ export const UserAccessView = ({
                         </td>
 
                         <td className="py-3 px-4 font-mono font-medium text-slate-800">
-                          {admin.mobile}
+                          {formatPhoneNumber(admin.mobile)}
                         </td>
 
                         <td className="py-3 px-4">
@@ -944,7 +945,7 @@ export const UserAccessView = ({
                 <input
                   type="tel"
                   required
-                  placeholder="e.g. 98200 12345 or +91 98200 12345"
+                  placeholder="+919820012345"
                   value={adminForm.mobile}
                   onChange={e => setAdminForm({ ...adminForm, mobile: e.target.value })}
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
@@ -1044,7 +1045,7 @@ export const UserAccessView = ({
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
               <div>
                 <div className="font-bold text-slate-900 text-xs">{targetAdminForReset.name}</div>
-                <div className="text-[11px] text-slate-500 font-mono">{targetAdminForReset.mobile}</div>
+                <div className="text-[11px] text-slate-500 font-mono">{formatPhoneNumber(targetAdminForReset.mobile)}</div>
               </div>
               <span className="text-[10px] bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded font-bold uppercase">
                 Emergency Override
@@ -1147,7 +1148,7 @@ export const UserAccessView = ({
               </div>
               <div className="flex justify-between items-center font-mono">
                 <span className="text-slate-500 font-medium">Mobile:</span>
-                <span className="text-slate-800">{targetAdminForDelete.mobile}</span>
+                <span className="text-slate-800 font-mono">{formatPhoneNumber(targetAdminForDelete.mobile)}</span>
               </div>
               {targetAdminForDelete.email && (
                 <div className="flex justify-between items-center">

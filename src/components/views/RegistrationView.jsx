@@ -32,6 +32,7 @@ import {
   BOWLING_STYLES,
   WARHAWKS_LOGO_URL
 } from '../../constants';
+import { formatPhoneNumber } from '../../utils/phone';
 
 export const RegistrationView = ({
   tournament,
@@ -61,7 +62,7 @@ export const RegistrationView = ({
   const [playerForm, setPlayerForm] = useState({
     fullName: currentUser?.name || '',
     email: currentUser?.email || '',
-    phone: currentUser?.phone || '+91 98200 12345',
+    phone: formatPhoneNumber(currentUser?.phone || '+919820012345'),
     age: 24,
     city: tournament?.city || 'Mumbai',
     primaryRole: 'All-Rounder',
@@ -255,6 +256,7 @@ export const RegistrationView = ({
     onPlayerRegister({
       tournamentId: tournament?.id || '',
       ...playerForm,
+      phone: formatPhoneNumber(playerForm.phone),
       age: cleanAge,
       preferredJerseyNo: cleanJersey,
       guestCount: gCount,
@@ -620,6 +622,7 @@ export const RegistrationView = ({
                       <input
                         type="tel"
                         required
+                        placeholder="+919820012345"
                         value={playerForm.phone}
                         onChange={e => setPlayerForm({ ...playerForm, phone: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
@@ -1098,7 +1101,7 @@ export const RegistrationView = ({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 pr-1">
                         <div className="font-bold text-slate-900 text-sm truncate">{app.fullName}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5 truncate">{app.email} · {app.phone}</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5 truncate">{app.email} · {formatPhoneNumber(app.phone)}</div>
                       </div>
 
                       <span
@@ -1192,7 +1195,7 @@ export const RegistrationView = ({
                           <td className="py-3 px-4">
                             <div className="font-bold text-slate-900">{app.fullName}</div>
                             <div className="text-[11px] text-slate-400 font-mono">{app.email}</div>
-                            <div className="text-[10px] text-slate-400">{app.phone}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{formatPhoneNumber(app.phone)}</div>
                           </td>
 
                           <td className="py-3 px-4">
@@ -1287,7 +1290,7 @@ export const RegistrationView = ({
           <div className="space-y-4 text-xs">
             <div className="p-3 bg-slate-50 rounded-lg space-y-1.5">
               <div className="font-semibold text-slate-900 text-sm">{reviewModalApp.fullName} · {reviewModalApp.primaryRole}</div>
-              <div className="text-slate-500">{reviewModalApp.email} · {reviewModalApp.phone} · {reviewModalApp.city}</div>
+              <div className="text-slate-500">{reviewModalApp.email} · <span className="font-mono">{formatPhoneNumber(reviewModalApp.phone)}</span> · {reviewModalApp.city}</div>
               <div className="text-[11px] text-slate-600 pt-1 border-t border-slate-200">
                 Playing specs: {reviewModalApp.battingStyle} · {reviewModalApp.bowlingStyle} · #{reviewModalApp.preferredJerseyNo} (Size {reviewModalApp.shirtSize})
               </div>
