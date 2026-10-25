@@ -59,7 +59,7 @@ export const Sidebar = ({
         { id: 'settings', label: 'Settings & Integrations', icon: Settings }
       ]
     : [
-        { id: 'sponsorships', label: 'Sponsors & Partners', icon: BadgePercent, badge: 'Public' },
+        { id: 'sponsorships', label: 'Sponsors', icon: BadgePercent, badge: 'Public' },
         { id: 'fixtures_results', label: 'Fixtures & Scores', icon: Calendar },
         { id: 'standings', label: 'Points Table & NRR', icon: ListOrdered },
         { id: 'teams_players', label: 'Teams & Squads', icon: Users },

@@ -83,6 +83,11 @@ export const SponsorshipView = ({
         ? sponsors.filter(s => s.displayOnPublicWeb !== false)
         : sponsors);
 
+  const overallCollectedAmount = visibleSponsors.reduce(
+    (acc, s) => acc + (Number(s.contributionAmount) || 0),
+    0
+  );
+
   if (!tournament) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-xl mx-auto my-8 shadow-xs">
@@ -107,12 +112,12 @@ export const SponsorshipView = ({
             <span>{isOrganizer ? 'Warhawks Corporate Partnerships' : 'Public Directory'}</span>
           </div>
           <h1 className="text-xl font-bold text-slate-900">
-            {isOrganizer ? 'Sponsorship Management' : 'Official Tournament Sponsors & Partners'}
+            {isOrganizer ? 'Sponsorship Management' : 'Sponsors'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {isOrganizer
               ? `Manage sponsor partners, contact records, financial commitments, and website visibility for ${tournament?.name} (Organized by Warhawks).`
-              : `Proud commercial partners and supporters backing ${tournament?.name} (Organized by Warhawks).`}
+              : `Commercial partners and supporters backing ${tournament?.name} (Organized by Warhawks).`}
           </p>
         </div>
 
@@ -143,13 +148,48 @@ export const SponsorshipView = ({
               </button>
             </>
           ) : (
-            <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-center">
-              <span className="text-emerald-700 font-medium">Official Partners: </span>
-              <span className="font-bold font-mono text-emerald-900">{visibleSponsors.length}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-center">
+                <span className="text-emerald-700 font-medium">Overall Collected: </span>
+                <span className="font-bold font-mono text-emerald-900">₹{overallCollectedAmount.toLocaleString()}</span>
+              </div>
+              <div className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-center">
+                <span className="text-slate-600 font-medium">Sponsors: </span>
+                <span className="font-bold font-mono text-slate-900">{visibleSponsors.length}</span>
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Financial Overview Cards for Player Role */}
+      {!isOrganizer && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+            <span className="text-xs font-medium text-slate-500">Overall Collected Sponsorship</span>
+            <div className="mt-2 flex flex-wrap items-baseline gap-2">
+              <span className="text-2xl font-bold font-mono text-emerald-700">
+                ₹{overallCollectedAmount.toLocaleString()}
+              </span>
+              <span className="text-xs font-mono text-slate-400">
+                total funding raised
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+            <span className="text-xs font-medium text-slate-500">Sponsor Partnerships</span>
+            <div className="mt-2 flex flex-wrap items-baseline gap-2">
+              <span className="text-2xl font-bold font-mono text-slate-900">
+                {visibleSponsors.length}
+              </span>
+              <span className="text-xs font-mono text-slate-400">
+                contributing partners
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sponsors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -174,10 +214,12 @@ export const SponsorshipView = ({
               <div className="p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 pr-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-mono inline-block">
-                      {sponsor.tier || 'Tournament Sponsor'}
-                    </span>
-                    <h3 className="font-bold text-base text-slate-900 mt-1.5 truncate">{sponsor.name}</h3>
+                    {isOrganizer && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-mono inline-block mb-1.5">
+                        {sponsor.tier || 'Tournament Sponsor'}
+                      </span>
+                    )}
+                    <h3 className="font-bold text-base text-slate-900 truncate">{sponsor.name}</h3>
                   </div>
 
                   {/* Organizer: Edit & Delete controls | Player: Verified Badge */}
@@ -296,18 +338,11 @@ export const SponsorshipView = ({
               ) : (
                 <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Sponsorship Level</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Sponsorship Amount</span>
                     <span className="font-mono font-bold text-slate-900 text-sm">
-                      {sponsor.contributionAmount > 0
-                        ? `₹${(sponsor.contributionAmount || 0).toLocaleString()}`
-                        : (sponsor.tier || 'Official Partner')}
+                      ₹{(sponsor.contributionAmount || 0).toLocaleString()}
                     </span>
                   </div>
-
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
-                    <CheckCircle className="w-3 h-3 text-emerald-600" />
-                    <span>Active Partner</span>
-                  </span>
                 </div>
               )}
             </div>

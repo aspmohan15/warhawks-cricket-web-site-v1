@@ -324,7 +324,7 @@ export const TopBar = ({
                     className="w-full text-left px-3.5 py-2.5 flex items-center gap-2 hover:bg-slate-50 text-slate-700 cursor-pointer"
                   >
                     <BadgePercent className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>View Sponsors & Partners</span>
+                    <span>View Sponsors</span>
                   </button>
                   <button
                     onClick={() => {
