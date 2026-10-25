@@ -451,21 +451,29 @@ export default function App() {
   };
 
   // Expenses
-  const handleCreateExpense = (data) => {
+  const handleCreateExpense = async (data) => {
     const targetTournamentId = data.tournamentId || activeTournamentId || activeTournament?.id;
     if (!targetTournamentId) {
       showToast('Cannot record expense: No active tournament edition selected. Create an edition first.', 'error');
       return;
     }
-    db.createExpense({ ...data, tournamentId: targetTournamentId });
-    refreshTournamentData(targetTournamentId);
-    showToast('Expense voucher recorded in financial ledger', 'success');
+    try {
+      await db.createExpense({ ...data, tournamentId: targetTournamentId });
+      refreshTournamentData(targetTournamentId);
+      showToast('Expense voucher recorded in financial ledger', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to record expense', 'error');
+    }
   };
 
-  const handleDeleteExpense = (id) => {
-    db.deleteExpense(id);
-    refreshTournamentData(activeTournamentId);
-    showToast('Expense voucher removed', 'info');
+  const handleDeleteExpense = async (id) => {
+    try {
+      await db.deleteExpense(id);
+      refreshTournamentData(activeTournamentId);
+      showToast('Expense voucher removed', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to remove expense', 'error');
+    }
   };
 
   // Food

@@ -1,14 +1,20 @@
 import React from 'react';
 
 export const AnnouncementRibbon = ({ announcements = [] }) => {
-  // Filter only active announcements
-  const activeAnnouncements = (announcements || []).filter(a => a && a.isActive !== false);
+  // Deduplicate by ID to ensure unique items only
+  const uniqueMap = new Map();
+  for (const a of (announcements || [])) {
+    if (a && a.id && a.isActive !== false) {
+      uniqueMap.set(a.id, a);
+    }
+  }
+  const activeAnnouncements = Array.from(uniqueMap.values());
 
   if (activeAnnouncements.length === 0) {
     return null;
   }
 
-  // Duplicate items to ensure uninterrupted seamless infinite looping
+  // Duplicate items for continuous seamless loop without stutter
   const items = [...activeAnnouncements, ...activeAnnouncements];
 
   return (
@@ -28,7 +34,9 @@ export const AnnouncementRibbon = ({ announcements = [] }) => {
             {items.map((item, index) => (
               <div
                 key={`${item.id}-${index}`}
-                className="inline-flex items-center gap-3 text-xs sm:text-[13px] text-slate-200 font-medium px-6 tracking-normal"
+                className={`inline-flex items-center gap-3 text-xs sm:text-[13px] text-slate-200 font-medium tracking-normal ${
+                  activeAnnouncements.length === 1 ? 'px-32 sm:px-64' : 'px-8 sm:px-14'
+                }`}
               >
                 <span>{item.message}</span>
                 <span className="text-emerald-500/70 text-xs select-none" aria-hidden="true">

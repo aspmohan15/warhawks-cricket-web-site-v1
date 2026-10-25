@@ -195,8 +195,14 @@ class TournamentDatabase {
         this.schema.auctionBids = [...others, ...remoteAuctionBids];
       }
       if (remoteAnnouncements !== null) {
-        const others = (this.schema.announcements || []).filter(a => a.tournamentId && a.tournamentId !== tournamentId);
-        this.schema.announcements = [...others, ...remoteAnnouncements];
+        const map = new Map();
+        for (const a of (this.schema.announcements || [])) {
+          if (a && a.id) map.set(a.id, a);
+        }
+        for (const a of remoteAnnouncements) {
+          if (a && a.id) map.set(a.id, a);
+        }
+        this.schema.announcements = Array.from(map.values());
       }
 
       this.saveToStorage();
@@ -671,7 +677,11 @@ class TournamentDatabase {
   // TOURNAMENT ANNOUNCEMENTS CRUD & REORDERING
   // ==========================================
   getAnnouncements(tournamentId, activeOnly = false) {
-    let list = [...(this.schema.announcements || [])];
+    const map = new Map();
+    for (const a of (this.schema.announcements || [])) {
+      if (a && a.id) map.set(a.id, a);
+    }
+    let list = Array.from(map.values());
     if (tournamentId) {
       list = list.filter(a => !a.tournamentId || a.tournamentId === tournamentId);
     }
@@ -682,12 +692,24 @@ class TournamentDatabase {
   }
 
   async createAnnouncement(data) {
+    const cleanMsg = (data.message || '').trim();
+    if (!cleanMsg) return null;
+
+    // Check if an announcement with identical message already exists in local schema to avoid accidental duplicates
+    const duplicate = (this.schema.announcements || []).find(
+      a => (!data.tournamentId || !a.tournamentId || a.tournamentId === data.tournamentId) &&
+           a.message?.trim().toLowerCase() === cleanMsg.toLowerCase()
+    );
+    if (duplicate) {
+      return duplicate;
+    }
+
     const list = this.getAnnouncements(data.tournamentId);
     const maxOrder = list.length > 0 ? Math.max(...list.map(a => Number(a.displayOrder ?? 0))) + 1 : 0;
     const newAnn = {
       id: data.id || `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       tournamentId: data.tournamentId || null,
-      message: (data.message || '').trim(),
+      message: cleanMsg,
       displayOrder: data.displayOrder !== undefined ? Number(data.displayOrder) : maxOrder,
       isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
       createdBy: 'Warhawks Operations',
@@ -703,12 +725,12 @@ class TournamentDatabase {
       console.warn('createAnnouncement notice:', err.message);
     }
 
-    const idx = (this.schema.announcements || []).findIndex(a => a.id === persisted.id);
-    if (idx >= 0) {
-      this.schema.announcements[idx] = persisted;
-    } else {
-      this.schema.announcements = [...(this.schema.announcements || []), persisted];
+    const map = new Map();
+    for (const a of (this.schema.announcements || [])) {
+      if (a && a.id) map.set(a.id, a);
     }
+    map.set(persisted.id, persisted);
+    this.schema.announcements = Array.from(map.values());
     this.saveToStorage();
     return persisted;
   }
@@ -796,31 +818,53 @@ class TournamentDatabase {
     return (this.schema.expenses || []).filter(e => e.tournamentId === tournamentId);
   }
 
-  createExpense(data) {
+  async createExpense(data) {
     const newExpense = {
       ...data,
-      id: data.id || `exp-${Date.now().toString(36)}`,
+      id: data.id || `exp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       amount: Number(data.amount) || 0,
       advanceAmount: Number(data.advanceAmount) || 0,
+      date: data.date || new Date().toISOString().split('T')[0],
+      vendorName: data.vendorName || '',
+      paymentMode: data.paymentMode || 'Bank Transfer',
+      paymentStatus: data.paymentStatus || 'paid',
+      notes: data.notes || '',
       createdAt: new Date().toISOString()
     };
-    this.schema.expenses.push(newExpense);
-    this.saveToStorage();
-    this.logAction(data.tournamentId, 'Warhawks Operations', 'organizer', 'CREATE_EXPENSE', 'Expense', newExpense.id, `Recorded voucher: ${newExpense.title}`);
 
+    let persisted = newExpense;
     if (isSupabaseConfigured()) {
-      supabaseDb.createExpense(newExpense).catch(err => console.warn('Supabase createExpense notice:', err.message));
+      try {
+        const res = await supabaseDb.createExpense(newExpense);
+        if (res) persisted = res;
+      } catch (err) {
+        console.warn('Supabase createExpense notice:', err.message);
+      }
     }
-    return newExpense;
+
+    const idx = (this.schema.expenses || []).findIndex(e => e.id === persisted.id);
+    if (idx !== -1) {
+      this.schema.expenses[idx] = persisted;
+    } else {
+      this.schema.expenses.push(persisted);
+    }
+    this.saveToStorage();
+    this.logAction(data.tournamentId, 'Warhawks Operations', 'organizer', 'CREATE_EXPENSE', 'Expense', persisted.id, `Recorded voucher: ${persisted.title}`);
+    return persisted;
   }
 
-  deleteExpense(id) {
+  async deleteExpense(id) {
     this.schema.expenses = (this.schema.expenses || []).filter(e => e.id !== id);
     this.saveToStorage();
 
     if (isSupabaseConfigured()) {
-      supabaseDb.deleteExpense(id).catch(err => console.warn('Supabase deleteExpense notice:', err.message));
+      try {
+        await supabaseDb.deleteExpense(id);
+      } catch (err) {
+        console.warn('Supabase deleteExpense notice:', err.message);
+      }
     }
+    return { success: true, id };
   }
 
   // ==========================================

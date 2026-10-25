@@ -327,7 +327,78 @@ async function runTests() {
   });
   console.log('✅ Test 11g Passed: Cleaned up test announcements.');
 
-  console.log('--- ALL 11 INTEGRATION, SECURITY & ANNOUNCEMENTS TESTS PASSED PERFECTLY! ---');
+  // Test 12: Tournament Expenses Persistence Validation
+  console.log('--- Test 12: Tournament Expenses Persistence Validation ---');
+  // 12a: Get tournament ID
+  const tRes = await pool.query('SELECT id FROM public.tournaments LIMIT 1;');
+  const testTournamentId = tRes.rows[0]?.id || 'tour-ed1-2026';
+
+  // 12b: Create Expense with advance_amount via /api/expenses
+  const testExpId = `exp-test-${Date.now()}`;
+  const createExpRes = await fetch('http://localhost:3000/api/expenses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + primaryToken
+    },
+    body: JSON.stringify({
+      id: testExpId,
+      tournamentId: testTournamentId,
+      title: 'Wankhede Turf Prep & Umpires',
+      category: 'Ground & Pitch',
+      amount: 60000,
+      advanceAmount: 20000,
+      date: '2026-12-15',
+      vendorName: 'Turf Authority',
+      paymentMode: 'Bank Transfer',
+      paymentStatus: 'paid',
+      notes: 'Initial 20k advance paid, 40k balance on match day'
+    })
+  });
+  const expData = await createExpRes.json();
+  if (!createExpRes.ok || expData.amount !== 60000 || expData.advanceAmount !== 20000) {
+    throw new Error('Failed to create expense voucher: ' + JSON.stringify(expData));
+  }
+  console.log('✅ Test 12a Passed: Expense created via API with advance amount: ₹' + expData.advanceAmount);
+
+  // 12c: Verify directly in PostgreSQL that row exists and advance_amount column is persisted
+  const expPgCheck = await pool.query(
+    'SELECT id, tournament_id, title, category, amount, advance_amount, payment_status FROM public.expenses WHERE id = $1;',
+    [testExpId]
+  );
+  if (expPgCheck.rows.length === 0) {
+    throw new Error('Expense row not found in PostgreSQL public.expenses table!');
+  }
+  const pgExpense = expPgCheck.rows[0];
+  if (Number(pgExpense.amount) !== 60000 || Number(pgExpense.advance_amount) !== 20000) {
+    throw new Error(`Expense numbers mismatch in PostgreSQL: amount=${pgExpense.amount}, advance_amount=${pgExpense.advance_amount}`);
+  }
+  console.log('✅ Test 12b Passed: Direct PostgreSQL row verified in public.expenses:', pgExpense);
+
+  // 12d: Verify GET /api/expenses?tournamentId=... returns the persisted expense
+  const getExpRes = await fetch(`http://localhost:3000/api/expenses?tournamentId=${testTournamentId}`);
+  const getExpData = await getExpRes.json();
+  const matched = getExpData.find(e => e.id === testExpId);
+  if (!matched || matched.amount !== 60000 || matched.advanceAmount !== 20000) {
+    throw new Error('GET /api/expenses failed to retrieve persisted expense voucher: ' + JSON.stringify(getExpData));
+  }
+  console.log('✅ Test 12c Passed: GET /api/expenses retrieved persisted expense correctly');
+
+  // 12e: Clean up test expense
+  const delExpRes = await fetch(`http://localhost:3000/api/expenses/${testExpId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + primaryToken }
+  });
+  if (!delExpRes.ok) {
+    throw new Error('Failed to delete test expense: ' + delExpRes.status);
+  }
+  const expDeletedPg = await pool.query('SELECT id FROM public.expenses WHERE id = $1;', [testExpId]);
+  if (expDeletedPg.rows.length !== 0) {
+    throw new Error('Expense still present in PostgreSQL after deletion!');
+  }
+  console.log('✅ Test 12d Passed: Cleaned up test expense voucher and verified PostgreSQL deletion.');
+
+  console.log('--- ALL 12 INTEGRATION, EXPENSES & PERSISTENCE TESTS PASSED PERFECTLY! ---');
   await pool.end();
   process.exit(0);
 }

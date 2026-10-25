@@ -204,18 +204,18 @@ const mapStandingFromDb = (row) => ({
 
 const mapExpenseFromDb = (row) => ({
   id: row.id,
-  tournamentId: row.tournament_id,
+  tournamentId: row.tournament_id || row.tournamentId,
   title: row.title,
   category: row.category,
-  amount: Number(row.amount),
-  advanceAmount: Number(row.advance_amount || 0),
-  date: row.date,
-  vendorName: row.vendor_name,
-  receiptUrl: row.receipt_url,
-  paymentMode: row.payment_mode,
-  paymentStatus: row.payment_status,
-  notes: row.notes,
-  createdAt: row.created_at
+  amount: Number(row.amount) || 0,
+  advanceAmount: Number(row.advance_amount ?? row.advanceAmount ?? 0),
+  date: row.date ? (row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0]) : new Date().toISOString().split('T')[0],
+  vendorName: row.vendor_name || row.vendorName || '',
+  receiptUrl: row.receipt_url || row.receiptUrl || '',
+  paymentMode: row.payment_mode || row.paymentMode || 'Bank Transfer',
+  paymentStatus: row.payment_status || row.paymentStatus || 'paid',
+  notes: row.notes || '',
+  createdAt: row.created_at || row.createdAt
 });
 
 const mapRuleFromDb = (row) => ({
@@ -950,20 +950,55 @@ export const supabaseDb = {
 
   // Expenses
   async getExpenses(tournamentId) {
+    try {
+      const url = tournamentId ? `/api/expenses?tournamentId=${encodeURIComponent(tournamentId)}` : '/api/expenses';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        return (data || []).map(mapExpenseFromDb);
+      }
+    } catch {
+      // Fallback to direct client
+    }
+
     const client = getSupabaseClient();
     if (!client) return null;
 
-    const { data, error } = await client
-      .from('expenses')
-      .select('*')
-      .eq('tournament_id', tournamentId)
-      .order('date', { ascending: false });
+    let query = client.from('expenses').select('*');
+    if (tournamentId) {
+      query = query.eq('tournament_id', tournamentId);
+    }
+    const { data, error } = await query.order('date', { ascending: false });
 
     if (error) throw error;
     return (data || []).map(mapExpenseFromDb);
   },
 
   async createExpense(exp) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+
+    try {
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(exp)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return mapExpenseFromDb(data);
+      }
+      if (res.status === 401 || res.status === 403) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Organizer authorization required to record tournament expenses.');
+      }
+    } catch (apiErr) {
+      if (apiErr.message?.includes('Organizer authorization required')) throw apiErr;
+    }
+
     const client = getSupabaseClient();
     if (!client) return null;
 
@@ -972,7 +1007,7 @@ export const supabaseDb = {
       tournament_id: exp.tournamentId,
       title: exp.title,
       category: exp.category,
-      amount: exp.amount,
+      amount: Number(exp.amount) || 0,
       advance_amount: Number(exp.advanceAmount) || 0,
       date: exp.date,
       vendor_name: exp.vendorName,
@@ -982,17 +1017,39 @@ export const supabaseDb = {
       notes: exp.notes || null
     };
 
-    const { data, error } = await client.from('expenses').insert([row]).select().single();
+    const { data, error } = await client.from('expenses').upsert([row]).select().single();
     if (error) throw error;
     return mapExpenseFromDb(data);
   },
 
   async deleteExpense(id) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+
+    try {
+      const res = await fetch(`/api/expenses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        return { success: true, id };
+      }
+      if (res.status === 401 || res.status === 403) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Organizer authorization required to delete expenses.');
+      }
+    } catch (apiErr) {
+      if (apiErr.message?.includes('Organizer authorization required')) throw apiErr;
+    }
+
     const client = getSupabaseClient();
     if (!client) return null;
 
     const { error } = await client.from('expenses').delete().eq('id', id);
     if (error) throw error;
+    return { success: true, id };
   },
 
   // Rules

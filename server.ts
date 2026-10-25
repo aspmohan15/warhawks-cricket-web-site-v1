@@ -1145,6 +1145,21 @@ app.post('/api/announcements', requireOrganizer, async (req: Request, res: Respo
       return res.status(400).json({ error: 'Announcement message cannot be empty.' });
     }
 
+    const cleanMsg = message.trim();
+
+    // Prevent duplicate announcement insertion with identical message
+    const existingCheck = await pool.query(
+      `SELECT * FROM public.announcements 
+       WHERE (tournament_id = $1 OR ($1 IS NULL AND tournament_id IS NULL))
+         AND TRIM(LOWER(message)) = TRIM(LOWER($2))
+       LIMIT 1;`,
+      [tournamentId || null, cleanMsg]
+    );
+
+    if (existingCheck.rows.length > 0) {
+      return res.status(200).json(mapAnnouncementRow(existingCheck.rows[0]));
+    }
+
     let order = displayOrder;
     if (order === undefined || order === null) {
       const maxRes = await pool.query('SELECT COALESCE(MAX(display_order), -1) + 1 AS next_order FROM public.announcements;');
@@ -1160,7 +1175,7 @@ app.post('/api/announcements', requireOrganizer, async (req: Request, res: Respo
     const values = [
       id,
       tournamentId || null,
-      message.trim(),
+      cleanMsg,
       order,
       isActive !== undefined ? Boolean(isActive) : true,
       'Warhawks Operations'
@@ -1280,7 +1295,146 @@ app.post('/api/announcements/reorder', requireOrganizer, async (req: Request, re
 });
 
 // ==============================================================================
-// 7. HEALTH & STATUS ENDPOINT
+// 7. TOURNAMENT EXPENSES API (Public/Participant Read + Organizer CRUD)
+// ==============================================================================
+const mapExpenseRow = (row: any) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  title: row.title,
+  category: row.category,
+  amount: Number(row.amount) || 0,
+  advanceAmount: Number(row.advance_amount || 0),
+  date: row.date ? (row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0]) : new Date().toISOString().split('T')[0],
+  vendorName: row.vendor_name || '',
+  receiptUrl: row.receipt_url || '',
+  paymentMode: row.payment_mode || 'Bank Transfer',
+  paymentStatus: row.payment_status || 'paid',
+  notes: row.notes || '',
+  createdAt: row.created_at
+});
+
+app.get('/api/expenses', async (req: Request, res: Response) => {
+  try {
+    const { tournamentId } = req.query;
+    const query = tournamentId
+      ? 'SELECT * FROM public.expenses WHERE tournament_id = $1 ORDER BY date DESC, created_at DESC;'
+      : 'SELECT * FROM public.expenses ORDER BY date DESC, created_at DESC;';
+    const params = tournamentId ? [tournamentId] : [];
+    const result = await pool.query(query, params);
+    return res.json(result.rows.map(mapExpenseRow));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/expenses', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const exp = req.body;
+    if (!exp.title?.trim()) {
+      return res.status(400).json({ error: 'Expense title is required.' });
+    }
+    if (!exp.tournamentId) {
+      return res.status(400).json({ error: 'Target tournament ID is required.' });
+    }
+
+    const id = exp.id || `exp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const query = `
+      INSERT INTO public.expenses (
+        id, tournament_id, title, category, amount, advance_amount,
+        date, vendor_name, receipt_url, payment_mode, payment_status, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (id) DO UPDATE SET
+        tournament_id = EXCLUDED.tournament_id,
+        title = EXCLUDED.title,
+        category = EXCLUDED.category,
+        amount = EXCLUDED.amount,
+        advance_amount = EXCLUDED.advance_amount,
+        date = EXCLUDED.date,
+        vendor_name = EXCLUDED.vendor_name,
+        receipt_url = EXCLUDED.receipt_url,
+        payment_mode = EXCLUDED.payment_mode,
+        payment_status = EXCLUDED.payment_status,
+        notes = EXCLUDED.notes
+      RETURNING *;
+    `;
+    const values = [
+      id,
+      exp.tournamentId,
+      exp.title.trim(),
+      exp.category || 'Ground & Pitch',
+      Number(exp.amount) || 0,
+      Number(exp.advanceAmount) || 0,
+      exp.date || new Date().toISOString().split('T')[0],
+      exp.vendorName ? exp.vendorName.trim() : '',
+      exp.receiptUrl || '',
+      exp.paymentMode || 'Bank Transfer',
+      exp.paymentStatus || 'paid',
+      exp.notes ? exp.notes.trim() : ''
+    ];
+
+    const result = await pool.query(query, values);
+    return res.status(201).json(mapExpenseRow(result.rows[0]));
+  } catch (err: any) {
+    console.error('API /api/expenses POST error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/expenses/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const fieldMap: Record<string, string> = {
+      title: 'title',
+      category: 'category',
+      amount: 'amount',
+      advanceAmount: 'advance_amount',
+      date: 'date',
+      vendorName: 'vendor_name',
+      receiptUrl: 'receipt_url',
+      paymentMode: 'payment_mode',
+      paymentStatus: 'payment_status',
+      notes: 'notes'
+    };
+
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    for (const [key, val] of Object.entries(updates)) {
+      if (fieldMap[key]) {
+        setClauses.push(`${fieldMap[key]} = $${idx}`);
+        values.push(val);
+        idx++;
+      }
+    }
+
+    if (setClauses.length === 0) return res.status(400).json({ error: 'No fields to update.' });
+
+    values.push(id);
+    const query = `UPDATE public.expenses SET ${setClauses.join(', ')} WHERE id = $${idx} RETURNING *;`;
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Expense voucher not found.' });
+    }
+    return res.json(mapExpenseRow(result.rows[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/expenses/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM public.expenses WHERE id = $1;', [id]);
+    return res.json({ success: true, id });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================================================================
+// 8. HEALTH & STATUS ENDPOINT
 // ==============================================================================
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
@@ -1296,10 +1450,10 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 });
 
 // ==============================================================================
-// 7. VITE DEV MIDDLEWARE / STATIC PRODUCTION SERVING
+// 9. VITE DEV MIDDLEWARE / STATIC PRODUCTION SERVING
 // ==============================================================================
 async function startServer() {
-  // Ensure announcements table exists in PostgreSQL
+  // Ensure announcements and expenses tables exist in PostgreSQL
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS public.announcements (
@@ -1313,9 +1467,27 @@ async function startServer() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
       );
       CREATE INDEX IF NOT EXISTS idx_announcements_order ON public.announcements(display_order ASC, created_at ASC);
+
+      CREATE TABLE IF NOT EXISTS public.expenses (
+        id TEXT PRIMARY KEY,
+        tournament_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount NUMERIC NOT NULL DEFAULT 0,
+        advance_amount NUMERIC NOT NULL DEFAULT 0,
+        date DATE NOT NULL,
+        vendor_name TEXT,
+        receipt_url TEXT,
+        payment_mode TEXT DEFAULT 'Bank Transfer',
+        payment_status TEXT DEFAULT 'paid',
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+      );
+      ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS advance_amount NUMERIC NOT NULL DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS idx_expenses_tour_date ON public.expenses(tournament_id, date DESC);
     `);
   } catch (err: any) {
-    console.warn('[Announcements Table Init]:', err.message);
+    console.warn('[Table Init Warning]:', err.message);
   }
 
   if (!isProd) {

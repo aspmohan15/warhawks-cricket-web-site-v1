@@ -36,14 +36,31 @@ export const AnnouncementsManager = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
 
-  const sortedAnnouncements = [...announcements].sort(
+  // Deduplicate announcements by ID
+  const uniqueMap = new Map();
+  for (const a of (announcements || [])) {
+    if (a && a.id) uniqueMap.set(a.id, a);
+  }
+  const sortedAnnouncements = Array.from(uniqueMap.values()).sort(
     (a, b) => (Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0)) || (new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
   );
 
   const handleAdd = async (e) => {
     if (e) e.preventDefault();
+    if (isSubmitting) return;
     const text = newText.trim();
     if (!text) return;
+
+    // Guard against duplicate announcement text
+    const exists = sortedAnnouncements.some(
+      a => a.message?.trim().toLowerCase() === text.toLowerCase()
+    );
+    if (exists) {
+      setFeedbackMsg('This announcement is already present in the list.');
+      setTimeout(() => setFeedbackMsg(''), 3000);
+      setNewText('');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
