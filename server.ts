@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import pg from 'pg';
 import crypto from 'crypto';
+import { OFFICIAL_TOURNAMENT_RULES } from './src/constants/officialRules.js';
 
 dotenv.config();
 
@@ -677,6 +678,19 @@ app.post('/api/tournaments', requireOrganizer, async (req: Request, res: Respons
     ];
 
     const result = await pool.query(query, values);
+    
+    // Auto-seed official tournament rules for the new tournament edition
+    for (let i = 0; i < OFFICIAL_TOURNAMENT_RULES.length; i++) {
+      const rule = OFFICIAL_TOURNAMENT_RULES[i];
+      const ruleId = `rule-${t.id}-${i + 1}`;
+      await pool.query(
+        `INSERT INTO public.rules (id, tournament_id, title, category, content, video_url, is_published, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+         ON CONFLICT (id) DO NOTHING;`,
+        [ruleId, t.id, rule.title, rule.category, rule.content, '', true]
+      ).catch(() => null);
+    }
+
     return res.status(201).json(result.rows[0]);
   } catch (err: any) {
     console.error('API /api/tournaments POST error:', err.message);
@@ -1435,6 +1449,111 @@ app.delete('/api/expenses/:id', requireOrganizer, async (req: Request, res: Resp
 });
 
 // ==============================================================================
+// 7c. TOURNAMENT RULES & DEMO VIDEOS ENDPOINTS
+// ==============================================================================
+const mapRuleRow = (row: any) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  title: row.title,
+  category: row.category,
+  content: row.content,
+  videoUrl: row.video_url || '',
+  isPublished: Boolean(row.is_published),
+  updatedAt: row.updated_at
+});
+
+app.get('/api/rules', async (req: Request, res: Response) => {
+  try {
+    const { tournamentId } = req.query;
+    const query = tournamentId
+      ? 'SELECT * FROM public.rules WHERE tournament_id = $1 ORDER BY id ASC;'
+      : 'SELECT * FROM public.rules ORDER BY id ASC;';
+    const params = tournamentId ? [tournamentId] : [];
+    const result = await pool.query(query, params);
+    return res.json(result.rows.map(mapRuleRow));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/rules', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const r = req.body;
+    if (!r.title?.trim() || !r.tournamentId) {
+      return res.status(400).json({ error: 'Title and tournamentId are required.' });
+    }
+    const newId = r.id || `rule-${Date.now().toString(36)}`;
+    const query = `
+      INSERT INTO public.rules (id, tournament_id, title, category, content, video_url, is_published, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        category = EXCLUDED.category,
+        content = EXCLUDED.content,
+        video_url = EXCLUDED.video_url,
+        is_published = EXCLUDED.is_published,
+        updated_at = now()
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [
+      newId,
+      r.tournamentId,
+      r.title.trim(),
+      r.category || 'Tournament general',
+      r.content || '',
+      r.videoUrl || '',
+      r.isPublished ?? true
+    ]);
+    return res.status(201).json(mapRuleRow(result.rows[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/rules/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const fieldMap: Record<string, string> = {
+      title: 'title',
+      category: 'category',
+      content: 'content',
+      videoUrl: 'video_url',
+      isPublished: 'is_published'
+    };
+    const setClauses: string[] = ['updated_at = now()'];
+    const values: any[] = [id];
+
+    Object.keys(updates).forEach(key => {
+      const col = fieldMap[key];
+      if (col) {
+        values.push(updates[key]);
+        setClauses.push(`${col} = $${values.length}`);
+      }
+    });
+
+    const query = `UPDATE public.rules SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`;
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Rule not found.' });
+    }
+    return res.json(mapRuleRow(result.rows[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/rules/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM public.rules WHERE id = $1;', [id]);
+    return res.json({ success: true, id });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================================================================
 // 8. HEALTH & STATUS ENDPOINT
 // ==============================================================================
 app.get('/api/health', async (_req: Request, res: Response) => {
@@ -1486,7 +1605,37 @@ async function startServer() {
       );
       ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS advance_amount NUMERIC NOT NULL DEFAULT 0;
       CREATE INDEX IF NOT EXISTS idx_expenses_tour_date ON public.expenses(tournament_id, date DESC);
+
+      CREATE TABLE IF NOT EXISTS public.rules (
+        id TEXT PRIMARY KEY,
+        tournament_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'Tournament general',
+        content TEXT NOT NULL,
+        video_url TEXT,
+        is_published BOOLEAN NOT NULL DEFAULT true,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+      );
+      CREATE INDEX IF NOT EXISTS idx_rules_tournament ON public.rules(tournament_id);
     `);
+
+    // Ensure all tournament editions have official rules seeded
+    const tournamentsRes = await pool.query('SELECT id, name FROM public.tournaments;');
+    for (const tour of tournamentsRes.rows) {
+      const existingRules = await pool.query('SELECT id FROM public.rules WHERE tournament_id = $1 LIMIT 1;', [tour.id]);
+      if (existingRules.rows.length === 0) {
+        for (let i = 0; i < OFFICIAL_TOURNAMENT_RULES.length; i++) {
+          const rule = OFFICIAL_TOURNAMENT_RULES[i];
+          const id = `rule-${tour.id}-${i + 1}`;
+          await pool.query(
+            `INSERT INTO public.rules (id, tournament_id, title, category, content, video_url, is_published, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+             ON CONFLICT (id) DO UPDATE SET title = $3, category = $4, content = $5;`,
+            [id, tour.id, rule.title, rule.category, rule.content, '', true]
+          );
+        }
+      }
+    }
   } catch (err: any) {
     console.warn('[Table Init Warning]:', err.message);
   }

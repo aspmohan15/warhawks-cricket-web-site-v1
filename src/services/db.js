@@ -3,6 +3,7 @@ import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS } from '../constants';
 import { isSupabaseConfigured, getSupabaseClient } from './supabase';
 import { supabaseDb } from './supabaseDb';
 import { formatPhoneNumber } from '../utils/phone';
+import { getDefaultEditionRules } from '../constants/officialRules';
 
 const STORAGE_KEY = 'warhawks_tournament_db_v2';
 const LEGACY_KEY_V1 = 'warhawks_admin_db_v1';
@@ -272,6 +273,10 @@ class TournamentDatabase {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
+    // Seed official tournament rules for this edition
+    const defaultRules = getDefaultEditionRules(newTournament.id);
+    this.schema.rules = [...(this.schema.rules || []), ...defaultRules];
 
     this.schema.tournaments.unshift(newTournament);
     this.saveToStorage();
@@ -1201,7 +1206,17 @@ class TournamentDatabase {
   // ==========================================
   getRules(tournamentId) {
     if (!tournamentId) return [];
-    return (this.schema.rules || []).filter(r => r.tournamentId === tournamentId);
+    const list = (this.schema.rules || []).filter(r => r.tournamentId === tournamentId);
+    if (list.length === 0) {
+      const defaultRules = getDefaultEditionRules(tournamentId);
+      this.schema.rules = [...(this.schema.rules || []), ...defaultRules];
+      this.saveToStorage();
+      if (isSupabaseConfigured()) {
+        defaultRules.forEach(r => supabaseDb.createRule(r).catch(() => null));
+      }
+      return defaultRules;
+    }
+    return list;
   }
 
   createRule(data) {

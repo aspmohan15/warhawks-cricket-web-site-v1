@@ -1054,6 +1054,15 @@ export const supabaseDb = {
 
   // Rules
   async getRules(tournamentId) {
+    try {
+      const url = tournamentId ? `/api/rules?tournamentId=${encodeURIComponent(tournamentId)}` : '/api/rules';
+      const res = await fetch(url);
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) return rows;
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
@@ -1061,7 +1070,7 @@ export const supabaseDb = {
       .from('rules')
       .select('*')
       .eq('tournament_id', tournamentId)
-      .order('category');
+      .order('id');
 
     if (error) throw error;
     return (data || []).map(mapRuleFromDb);
