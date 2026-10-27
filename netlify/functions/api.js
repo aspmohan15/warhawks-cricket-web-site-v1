@@ -99,28 +99,45 @@ const mapRuleRow = (row) => ({
 
 const mapMatchRow = (row) => ({
   id: row.id,
-  tournamentId: row.tournament_id,
-  matchNumber: Number(row.match_number),
+  tournamentId: row.tournament_id || row.tournamentId,
+  tournament_id: row.tournament_id || row.tournamentId,
+  matchNumber: Number(row.match_number ?? row.matchNumber),
+  match_number: Number(row.match_number ?? row.matchNumber),
   round: row.round || 'Group Stage',
-  teamAId: row.team_a_id,
-  teamBId: row.team_b_id,
+  teamAId: row.team_a_id || row.teamAId,
+  team_a_id: row.team_a_id || row.teamAId,
+  teamBId: row.team_b_id || row.teamBId,
+  team_b_id: row.team_b_id || row.teamBId,
   date: row.date ? (row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0]) : new Date().toISOString().split('T')[0],
   time: row.time || '19:30',
   venue: row.venue || 'Stadium Ground',
   status: row.status || 'scheduled',
-  tossWinnerId: row.toss_winner_id || undefined,
-  tossDecision: row.toss_decision || undefined,
-  teamAScore: row.team_a_score || '',
-  teamAOvers: row.team_a_overs !== null && row.team_a_overs !== undefined ? Number(row.team_a_overs) : undefined,
-  teamBScore: row.team_b_score || '',
-  teamBOvers: row.team_b_overs !== null && row.team_b_overs !== undefined ? Number(row.team_b_overs) : undefined,
-  winnerId: row.winner_id || undefined,
-  resultSummary: row.result_summary || '',
-  manOfTheMatchPlayerId: row.man_of_the_match_player_id || undefined,
-  isImported: Boolean(row.is_imported),
-  importSource: row.import_source || 'manual',
-  cricheroesMatchId: row.cricheroes_match_id || undefined,
-  createdAt: row.created_at
+  tossWinnerId: row.toss_winner_id || row.tossWinnerId || undefined,
+  toss_winner_id: row.toss_winner_id || row.tossWinnerId || undefined,
+  tossDecision: row.toss_decision || row.tossDecision || undefined,
+  toss_decision: row.toss_decision || row.tossDecision || undefined,
+  teamAScore: row.team_a_score || row.teamAScore || '',
+  team_a_score: row.team_a_score || row.teamAScore || '',
+  teamAOvers: row.team_a_overs !== null && row.team_a_overs !== undefined ? Number(row.team_a_overs) : (row.teamAOvers !== undefined ? Number(row.teamAOvers) : undefined),
+  team_a_overs: row.team_a_overs !== null && row.team_a_overs !== undefined ? Number(row.team_a_overs) : (row.teamAOvers !== undefined ? Number(row.teamAOvers) : undefined),
+  teamBScore: row.team_b_score || row.teamBScore || '',
+  team_b_score: row.team_b_score || row.teamBScore || '',
+  teamBOvers: row.team_b_overs !== null && row.team_b_overs !== undefined ? Number(row.team_b_overs) : (row.teamBOvers !== undefined ? Number(row.teamBOvers) : undefined),
+  team_b_overs: row.team_b_overs !== null && row.team_b_overs !== undefined ? Number(row.team_b_overs) : (row.teamBOvers !== undefined ? Number(row.teamBOvers) : undefined),
+  winnerId: row.winner_id || row.winnerId || undefined,
+  winner_id: row.winner_id || row.winnerId || undefined,
+  resultSummary: row.result_summary || row.resultSummary || '',
+  result_summary: row.result_summary || row.resultSummary || '',
+  manOfTheMatchPlayerId: row.man_of_the_match_player_id || row.manOfTheMatchPlayerId || undefined,
+  man_of_the_match_player_id: row.man_of_the_match_player_id || row.manOfTheMatchPlayerId || undefined,
+  isImported: Boolean(row.is_imported ?? row.isImported),
+  is_imported: Boolean(row.is_imported ?? row.isImported),
+  importSource: row.import_source || row.importSource || 'manual',
+  import_source: row.import_source || row.importSource || 'manual',
+  cricheroesMatchId: row.cricheroes_match_id || row.cricheroesMatchId || undefined,
+  cricheroes_match_id: row.cricheroes_match_id || row.cricheroesMatchId || undefined,
+  createdAt: row.created_at || row.createdAt,
+  created_at: row.created_at || row.createdAt
 });
 
 export async function handler(event) {
@@ -738,21 +755,67 @@ export async function handler(event) {
           return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
         }
         const m = body;
+        if (!m.tournamentId) {
+          return jsonResponse(400, { error: 'Target tournament ID is required to schedule a match.' });
+        }
+        if (!m.teamAId || !m.teamBId) {
+          return jsonResponse(400, { error: 'Please select both Team A and Team B from registered tournament teams.' });
+        }
+        if (m.teamAId === m.teamBId) {
+          return jsonResponse(400, { error: 'Team A and Team B cannot be the same franchise.' });
+        }
+
         const newId = m.id || `mat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
         if (pool) {
-          const res = await pool.query(
-            `INSERT INTO public.matches (
-              id, tournament_id, match_number, round, team_a_id, team_b_id,
-              date, time, venue, status, is_imported, import_source
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;`,
-            [
-              newId, m.tournamentId, Number(m.matchNumber) || 1, m.round || 'Group Stage',
-              m.teamAId, m.teamBId, m.date || new Date().toISOString().split('T')[0],
-              m.time || '19:30', m.venue || 'Stadium Ground', m.status || 'scheduled',
-              Boolean(m.isImported), m.importSource || 'manual'
-            ]
-          );
-          return jsonResponse(201, mapMatchRow(res.rows[0]));
+          try {
+            // Auto-calculate next available match number to prevent unique constraint conflict (tournament_id, match_number)
+            const maxRes = await pool.query(
+              'SELECT COALESCE(MAX(match_number), 0) + 1 AS next_num FROM public.matches WHERE tournament_id = $1;',
+              [m.tournamentId]
+            );
+            const nextMatchNum = Number(maxRes.rows[0]?.next_num) || 1;
+
+            let targetMatchNumber = Number(m.matchNumber);
+            if (!targetMatchNumber || targetMatchNumber < 1) {
+              targetMatchNumber = nextMatchNum;
+            } else {
+              const exists = await pool.query(
+                'SELECT 1 FROM public.matches WHERE tournament_id = $1 AND match_number = $2 LIMIT 1;',
+                [m.tournamentId, targetMatchNumber]
+              );
+              if (exists.rows.length > 0) {
+                targetMatchNumber = nextMatchNum;
+              }
+            }
+
+            const res = await pool.query(
+              `INSERT INTO public.matches (
+                id, tournament_id, match_number, round, team_a_id, team_b_id,
+                date, time, venue, status, is_imported, import_source
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+              ON CONFLICT (id) DO UPDATE SET
+                tournament_id = EXCLUDED.tournament_id,
+                match_number = EXCLUDED.match_number,
+                round = EXCLUDED.round,
+                team_a_id = EXCLUDED.team_a_id,
+                team_b_id = EXCLUDED.team_b_id,
+                date = EXCLUDED.date,
+                time = EXCLUDED.time,
+                venue = EXCLUDED.venue,
+                status = EXCLUDED.status
+              RETURNING *;`,
+              [
+                newId, m.tournamentId, targetMatchNumber, m.round || 'Group Stage',
+                m.teamAId, m.teamBId, m.date || new Date().toISOString().split('T')[0],
+                m.time || '19:30', m.venue || 'Stadium Ground', m.status || 'scheduled',
+                Boolean(m.isImported), m.importSource || 'manual'
+              ]
+            );
+            return jsonResponse(201, mapMatchRow(res.rows[0]));
+          } catch (dbErr) {
+            console.error('Netlify Function POST /matches DB error:', dbErr.message);
+            return jsonResponse(400, { error: dbErr.message || 'Failed to schedule fixture in database.' });
+          }
         }
         return jsonResponse(201, { id: newId, ...m });
       }
@@ -762,30 +825,50 @@ export async function handler(event) {
           return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
         }
         if (pool) {
-          const updates = body;
-          const fieldMap = {
-            teamAId: 'team_a_id', teamBId: 'team_b_id', matchNumber: 'match_number',
-            round: 'round', date: 'date', time: 'time', venue: 'venue', status: 'status',
-            tossWinnerId: 'toss_winner_id', tossDecision: 'toss_decision',
-            teamAScore: 'team_a_score', teamAOvers: 'team_a_overs',
-            teamBScore: 'team_b_score', teamBOvers: 'team_b_overs',
-            winnerId: 'winner_id', resultSummary: 'result_summary',
-            manOfTheMatchPlayerId: 'man_of_the_match_player_id',
-            cricheroesMatchId: 'cricheroes_match_id'
-          };
-          const setClauses = [];
-          const values = [matchId];
-          Object.keys(updates).forEach(key => {
-            const col = fieldMap[key];
-            if (col) {
-              values.push(updates[key]);
-              setClauses.push(`${col} = $${values.length}`);
+          try {
+            const updates = body;
+            if (updates.teamAId && updates.teamBId && updates.teamAId === updates.teamBId) {
+              return jsonResponse(400, { error: 'Team A and Team B cannot be the same franchise.' });
             }
-          });
-          if (setClauses.length > 0) {
-            const res = await pool.query(`UPDATE public.matches SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`, values);
-            if (res.rows.length === 0) return jsonResponse(404, { error: 'Match not found.' });
-            return jsonResponse(200, mapMatchRow(res.rows[0]));
+
+            if (updates.teamAId || updates.teamBId) {
+              const curRes = await pool.query('SELECT team_a_id, team_b_id FROM public.matches WHERE id = $1;', [matchId]);
+              if (curRes.rows.length > 0) {
+                const curA = updates.teamAId || curRes.rows[0].team_a_id;
+                const curB = updates.teamBId || curRes.rows[0].team_b_id;
+                if (curA === curB) {
+                  return jsonResponse(400, { error: 'Team A and Team B cannot be the same franchise.' });
+                }
+              }
+            }
+
+            const fieldMap = {
+              teamAId: 'team_a_id', teamBId: 'team_b_id', matchNumber: 'match_number',
+              round: 'round', date: 'date', time: 'time', venue: 'venue', status: 'status',
+              tossWinnerId: 'toss_winner_id', tossDecision: 'toss_decision',
+              teamAScore: 'team_a_score', teamAOvers: 'team_a_overs',
+              teamBScore: 'team_b_score', teamBOvers: 'team_b_overs',
+              winnerId: 'winner_id', resultSummary: 'result_summary',
+              manOfTheMatchPlayerId: 'man_of_the_match_player_id',
+              cricheroesMatchId: 'cricheroes_match_id'
+            };
+            const setClauses = [];
+            const values = [matchId];
+            Object.keys(updates).forEach(key => {
+              const col = fieldMap[key];
+              if (col) {
+                values.push(updates[key]);
+                setClauses.push(`${col} = $${values.length}`);
+              }
+            });
+            if (setClauses.length > 0) {
+              const res = await pool.query(`UPDATE public.matches SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`, values);
+              if (res.rows.length === 0) return jsonResponse(404, { error: 'Match not found.' });
+              return jsonResponse(200, mapMatchRow(res.rows[0]));
+            }
+          } catch (dbErr) {
+            console.error('Netlify Function PATCH /matches DB error:', dbErr.message);
+            return jsonResponse(400, { error: dbErr.message || 'Failed to update fixture.' });
           }
         }
         return jsonResponse(200, { id: matchId, ...body });

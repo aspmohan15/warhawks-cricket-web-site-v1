@@ -97,31 +97,34 @@ const mapPlayerFromDb = (row) => ({
 /**
  * Normalizes a match record from database row
  */
-const mapMatchFromDb = (row) => ({
-  id: row.id,
-  tournamentId: row.tournament_id,
-  matchNumber: row.match_number,
-  round: row.round,
-  teamAId: row.team_a_id,
-  teamBId: row.team_b_id,
-  date: row.date,
-  time: row.time,
-  venue: row.venue,
-  status: row.status,
-  tossWinnerId: row.toss_winner_id,
-  tossDecision: row.toss_decision,
-  teamAScore: row.team_a_score,
-  teamAOvers: row.team_a_overs ? Number(row.team_a_overs) : null,
-  teamBScore: row.team_b_score,
-  teamBOvers: row.team_b_overs ? Number(row.team_b_overs) : null,
-  winnerId: row.winner_id,
-  resultSummary: row.result_summary,
-  manOfTheMatchPlayerId: row.man_of_the_match_player_id,
-  isImported: Boolean(row.is_imported),
-  importSource: row.import_source,
-  cricheroesMatchId: row.cricheroes_match_id,
-  createdAt: row.created_at
-});
+const mapMatchFromDb = (row) => {
+  if (!row) return null;
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id || row.tournamentId,
+    matchNumber: Number(row.match_number ?? row.matchNumber),
+    round: row.round || 'Group Stage',
+    teamAId: row.team_a_id || row.teamAId,
+    teamBId: row.team_b_id || row.teamBId,
+    date: row.date ? (row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0]) : (row.date || ''),
+    time: row.time || '19:30',
+    venue: row.venue || 'Stadium Ground',
+    status: row.status || 'scheduled',
+    tossWinnerId: row.toss_winner_id || row.tossWinnerId,
+    tossDecision: row.toss_decision || row.tossDecision,
+    teamAScore: row.team_a_score ?? row.teamAScore ?? '',
+    teamAOvers: (row.team_a_overs !== null && row.team_a_overs !== undefined) ? Number(row.team_a_overs) : (row.teamAOvers !== undefined && row.teamAOvers !== null ? Number(row.teamAOvers) : null),
+    teamBScore: row.team_b_score ?? row.teamBScore ?? '',
+    teamBOvers: (row.team_b_overs !== null && row.team_b_overs !== undefined) ? Number(row.team_b_overs) : (row.teamBOvers !== undefined && row.teamBOvers !== null ? Number(row.teamBOvers) : null),
+    winnerId: row.winner_id || row.winnerId,
+    resultSummary: row.result_summary || row.resultSummary || '',
+    manOfTheMatchPlayerId: row.man_of_the_match_player_id || row.manOfTheMatchPlayerId,
+    isImported: Boolean(row.is_imported ?? row.isImported),
+    importSource: row.import_source || row.importSource || 'manual',
+    cricheroesMatchId: row.cricheroes_match_id || row.cricheroesMatchId,
+    createdAt: row.created_at || row.createdAt
+  };
+};
 
 /**
  * Normalizes a sponsor record from database row

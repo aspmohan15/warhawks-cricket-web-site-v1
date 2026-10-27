@@ -169,8 +169,12 @@ class TournamentDatabase {
         this.schema.players = [...others, ...remotePlayers];
       }
       if (remoteMatches !== null) {
-        const others = this.schema.matches.filter(m => m.tournamentId !== tournamentId);
-        this.schema.matches = [...others, ...remoteMatches];
+        const others = (this.schema.matches || []).filter(m => m.tournamentId && m.tournamentId !== tournamentId);
+        const cleanMatches = (remoteMatches || []).map(m => ({
+          ...m,
+          tournamentId: m.tournamentId || tournamentId
+        }));
+        this.schema.matches = [...others, ...cleanMatches];
       }
       if (remoteSponsors !== null) {
         const others = this.schema.sponsors.filter(s => s.tournamentId !== tournamentId);

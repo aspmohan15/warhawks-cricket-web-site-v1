@@ -125,8 +125,12 @@ export const FixturesResultsView = ({
       onNavigateToEditions?.();
       return;
     }
+    if (!matchForm.teamAId || !matchForm.teamBId) {
+      alert('Please select both Team A and Team B from the registered tournament teams.');
+      return;
+    }
     if (matchForm.teamAId === matchForm.teamBId) {
-      alert('Team A and Team B cannot be the same franchise.');
+      alert('Team A and Team B cannot be the same franchise. Please select two distinct registered teams.');
       return;
     }
     const rawMatchNum = String(matchForm.matchNumber ?? '').trim();
@@ -137,13 +141,13 @@ export const FixturesResultsView = ({
     onCreateMatch({
       tournamentId: tournament?.id || '',
       matchNumber: Number(rawMatchNum),
-      round: matchForm.round,
+      round: matchForm.round || 'Group Stage',
       teamAId: matchForm.teamAId,
       teamBId: matchForm.teamBId,
       date: matchForm.date,
       time: matchForm.time,
       venue: matchForm.venue,
-      status: matchForm.status,
+      status: matchForm.status || 'scheduled',
       isImported: false,
       importSource: 'manual'
     });
@@ -241,11 +245,20 @@ export const FixturesResultsView = ({
               </button>
               <button
                 onClick={() => {
+                  if (teams.length < 2) {
+                    alert('At least 2 registered teams are required in this tournament edition before scheduling matches. Please register teams in the Teams & Squads tab first.');
+                    return;
+                  }
+                  const maxNum = matches.reduce((max, m) => Math.max(max, Number(m.matchNumber) || 0), 0);
+                  const defaultTeamA = teams[0]?.id || '';
+                  const defaultTeamB = (teams[1]?.id && teams[1]?.id !== defaultTeamA)
+                    ? teams[1]?.id
+                    : (teams.find(t => t.id !== defaultTeamA)?.id || '');
                   setMatchForm({
-                    matchNumber: matches.length + 1,
+                    matchNumber: maxNum + 1,
                     round: 'Group Stage',
-                    teamAId: teams[0]?.id || '',
-                    teamBId: teams[1]?.id || '',
+                    teamAId: defaultTeamA,
+                    teamBId: defaultTeamB,
                     date: new Date().toISOString().split('T')[0],
                     time: '19:30',
                     venue: tournament?.venue || 'Stadium Ground',
@@ -723,12 +736,20 @@ export const FixturesResultsView = ({
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Team A (Home)</label>
+              <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs"
+                  style={{ backgroundColor: teams.find(t => t.id === matchForm.teamAId)?.primaryColor || '#0284c7' }}
+                />
+                <span>Team A (Home)</span>
+              </label>
               <select
+                required
                 value={matchForm.teamAId}
                 onChange={e => setMatchForm({ ...matchForm, teamAId: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
               >
+                <option value="">Select Team A...</option>
                 {teams.map(t => (
                   <option key={t.id} value={t.id}>
                     {t.name} ({t.shortCode})
@@ -737,12 +758,20 @@ export const FixturesResultsView = ({
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Team B (Away)</label>
+              <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs"
+                  style={{ backgroundColor: teams.find(t => t.id === matchForm.teamBId)?.primaryColor || '#dc2626' }}
+                />
+                <span>Team B (Away)</span>
+              </label>
               <select
+                required
                 value={matchForm.teamBId}
                 onChange={e => setMatchForm({ ...matchForm, teamBId: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
               >
+                <option value="">Select Team B...</option>
                 {teams.map(t => (
                   <option key={t.id} value={t.id}>
                     {t.name} ({t.shortCode})
@@ -750,6 +779,12 @@ export const FixturesResultsView = ({
                 ))}
               </select>
             </div>
+            {matchForm.teamAId && matchForm.teamBId && matchForm.teamAId === matchForm.teamBId && (
+              <div className="col-span-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Team A and Team B cannot be the same franchise. Please choose two distinct teams.</span>
+              </div>
+            )}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Date</label>
               <input
