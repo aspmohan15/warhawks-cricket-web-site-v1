@@ -990,7 +990,9 @@ export const RegistrationView = ({
                               </span>
                               <span className="font-bold text-slate-900 truncate flex items-center gap-1.5 mt-0.5 text-xs">
                                 <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
-                                <span className="truncate">Warhawks Operations</span>
+                                <span className="truncate" title={tournament?.payeeName || settings?.payeeName || DEFAULT_WARHAWKS_UPI.payeeName || 'Warhawks Tournament Operations'}>
+                                  {tournament?.payeeName || settings?.payeeName || DEFAULT_WARHAWKS_UPI.payeeName || 'Warhawks Tournament Operations'}
+                                </span>
                               </span>
                             </div>
 

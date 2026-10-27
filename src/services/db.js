@@ -272,6 +272,7 @@ class TournamentDatabase {
       upiQrCodeUrl: data.upiQrCodeUrl || data.upi_qr_code_url || '',
       upiId: data.upiId || data.upi_id || 'warhawks.sports@icici',
       upiMobileNumber: data.upiMobileNumber || data.upi_mobile_number || '',
+      payeeName: data.payeeName || data.payee_name || 'Warhawks Tournament Operations',
       registrationFee: Number(data.registrationFee ?? data.registration_fee) || 1500,
       isArchived: false,
       createdAt: new Date().toISOString(),

@@ -15,6 +15,7 @@ import {
   QrCode,
   Upload,
   Phone,
+  User,
   Lock
 } from 'lucide-react';
 import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS, WARHAWKS_LOGO_URL } from '../../constants';
@@ -40,6 +41,7 @@ export const SettingsView = ({
     supabaseAnonKey: settings.supabaseAnonKey || currentSupabase.anonKey || '',
     upiQrCodeUrl: tournament?.upiQrCodeUrl || settings.upiQrCodeUrl || DEFAULT_WARHAWKS_UPI.defaultQrCodeUrl,
     upiId: tournament?.upiId || settings.upiId || DEFAULT_WARHAWKS_UPI.upiId,
+    payeeName: tournament?.payeeName || settings.payeeName || DEFAULT_WARHAWKS_UPI.payeeName || 'Warhawks Tournament Operations',
     upiMobileNumber: tournament?.upiMobileNumber || settings.upiMobileNumber || '',
     registrationFee: tournament?.registrationFee ?? settings.registrationFee ?? 1500
   });
@@ -54,11 +56,12 @@ export const SettingsView = ({
         ...prev,
         upiQrCodeUrl: tournament.upiQrCodeUrl || prev.upiQrCodeUrl || DEFAULT_WARHAWKS_UPI.defaultQrCodeUrl,
         upiId: tournament.upiId || prev.upiId || DEFAULT_WARHAWKS_UPI.upiId,
+        payeeName: tournament.payeeName || prev.payeeName || DEFAULT_WARHAWKS_UPI.payeeName || 'Warhawks Tournament Operations',
         upiMobileNumber: tournament.upiMobileNumber || prev.upiMobileNumber || '',
         registrationFee: tournament.registrationFee ?? prev.registrationFee ?? 1500
       }));
     }
-  }, [tournament?.id, tournament?.upiQrCodeUrl, tournament?.upiId, tournament?.upiMobileNumber, tournament?.registrationFee]);
+  }, [tournament?.id, tournament?.upiQrCodeUrl, tournament?.upiId, tournament?.payeeName, tournament?.upiMobileNumber, tournament?.registrationFee]);
 
   if (currentUser && !isAdmin) {
     return (
@@ -84,6 +87,7 @@ export const SettingsView = ({
     const cleanFee = rawFee === '' ? 0 : Number(rawFee);
     const cleanSettings = {
       ...form,
+      payeeName: form.payeeName || 'Warhawks Tournament Operations',
       registrationFee: cleanFee
     };
     onUpdateSettings(cleanSettings);
@@ -92,6 +96,7 @@ export const SettingsView = ({
       onUpdateTournament(tournament.id, {
         upiQrCodeUrl: form.upiQrCodeUrl,
         upiId: form.upiId,
+        payeeName: form.payeeName || 'Warhawks Tournament Operations',
         upiMobileNumber: form.upiMobileNumber,
         registrationFee: cleanFee
       });
@@ -390,22 +395,42 @@ export const SettingsView = ({
               </p>
             </div>
 
-            {/* UPI ID, UPI Mobile Number and Fee Parameters */}
+            {/* UPI ID, Payee Name, UPI Mobile Number and Fee Parameters */}
             <div className="md:col-span-2 space-y-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Organizer UPI ID / VPA
-                </label>
-                <input
-                  type="text"
-                  value={form.upiId || ''}
-                  onChange={e => setForm({ ...form, upiId: e.target.value })}
-                  placeholder="e.g. warhawks.sports@icici"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
-                />
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Displayed on the public tournament registration portal for participant fee collection.
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Payee Name / Account Holder</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.payeeName || ''}
+                    onChange={e => setForm({ ...form, payeeName: e.target.value })}
+                    placeholder="e.g. Warhawks Tournament Operations"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-xs text-slate-900"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Beneficiary name displayed to players during tournament fee checkout.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Organizer UPI ID / VPA</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.upiId || ''}
+                    onChange={e => setForm({ ...form, upiId: e.target.value })}
+                    placeholder="e.g. warhawks.sports@icici"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Displayed on the public tournament registration portal for participant fee collection.
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
