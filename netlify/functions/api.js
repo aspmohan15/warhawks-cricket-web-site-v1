@@ -97,6 +97,32 @@ const mapRuleRow = (row) => ({
   updatedAt: row.updated_at
 });
 
+const mapMatchRow = (row) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  matchNumber: Number(row.match_number),
+  round: row.round || 'Group Stage',
+  teamAId: row.team_a_id,
+  teamBId: row.team_b_id,
+  date: row.date ? (row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0]) : new Date().toISOString().split('T')[0],
+  time: row.time || '19:30',
+  venue: row.venue || 'Stadium Ground',
+  status: row.status || 'scheduled',
+  tossWinnerId: row.toss_winner_id || undefined,
+  tossDecision: row.toss_decision || undefined,
+  teamAScore: row.team_a_score || '',
+  teamAOvers: row.team_a_overs !== null && row.team_a_overs !== undefined ? Number(row.team_a_overs) : undefined,
+  teamBScore: row.team_b_score || '',
+  teamBOvers: row.team_b_overs !== null && row.team_b_overs !== undefined ? Number(row.team_b_overs) : undefined,
+  winnerId: row.winner_id || undefined,
+  resultSummary: row.result_summary || '',
+  manOfTheMatchPlayerId: row.man_of_the_match_player_id || undefined,
+  isImported: Boolean(row.is_imported),
+  importSource: row.import_source || 'manual',
+  cricheroesMatchId: row.cricheroes_match_id || undefined,
+  createdAt: row.created_at
+});
+
 export async function handler(event) {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -686,6 +712,93 @@ export async function handler(event) {
           await pool.query('DELETE FROM public.players WHERE id = $1;', [playerId]);
         }
         return jsonResponse(200, { success: true, id: playerId });
+      }
+    }
+
+    // Matches API
+    if (path === '/matches' || path.startsWith('/matches/')) {
+      const match = path.match(/^\/matches\/([^/]+)$/);
+      const matchId = match ? match[1] : null;
+
+      if (method === 'GET' && !matchId) {
+        if (pool) {
+          const tId = queryParams.tournamentId;
+          const query = tId
+            ? 'SELECT * FROM public.matches WHERE tournament_id = $1 ORDER BY match_number ASC;'
+            : 'SELECT * FROM public.matches ORDER BY match_number ASC;';
+          const params = tId ? [tId] : [];
+          const res = await pool.query(query, params);
+          return jsonResponse(200, res.rows.map(mapMatchRow));
+        }
+        return jsonResponse(200, []);
+      }
+
+      if (method === 'POST' && !matchId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const m = body;
+        const newId = m.id || `mat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        if (pool) {
+          const res = await pool.query(
+            `INSERT INTO public.matches (
+              id, tournament_id, match_number, round, team_a_id, team_b_id,
+              date, time, venue, status, is_imported, import_source
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;`,
+            [
+              newId, m.tournamentId, Number(m.matchNumber) || 1, m.round || 'Group Stage',
+              m.teamAId, m.teamBId, m.date || new Date().toISOString().split('T')[0],
+              m.time || '19:30', m.venue || 'Stadium Ground', m.status || 'scheduled',
+              Boolean(m.isImported), m.importSource || 'manual'
+            ]
+          );
+          return jsonResponse(201, mapMatchRow(res.rows[0]));
+        }
+        return jsonResponse(201, { id: newId, ...m });
+      }
+
+      if (method === 'PATCH' && matchId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          const updates = body;
+          const fieldMap = {
+            teamAId: 'team_a_id', teamBId: 'team_b_id', matchNumber: 'match_number',
+            round: 'round', date: 'date', time: 'time', venue: 'venue', status: 'status',
+            tossWinnerId: 'toss_winner_id', tossDecision: 'toss_decision',
+            teamAScore: 'team_a_score', teamAOvers: 'team_a_overs',
+            teamBScore: 'team_b_score', teamBOvers: 'team_b_overs',
+            winnerId: 'winner_id', resultSummary: 'result_summary',
+            manOfTheMatchPlayerId: 'man_of_the_match_player_id',
+            cricheroesMatchId: 'cricheroes_match_id'
+          };
+          const setClauses = [];
+          const values = [matchId];
+          Object.keys(updates).forEach(key => {
+            const col = fieldMap[key];
+            if (col) {
+              values.push(updates[key]);
+              setClauses.push(`${col} = $${values.length}`);
+            }
+          });
+          if (setClauses.length > 0) {
+            const res = await pool.query(`UPDATE public.matches SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`, values);
+            if (res.rows.length === 0) return jsonResponse(404, { error: 'Match not found.' });
+            return jsonResponse(200, mapMatchRow(res.rows[0]));
+          }
+        }
+        return jsonResponse(200, { id: matchId, ...body });
+      }
+
+      if (method === 'DELETE' && matchId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          await pool.query('DELETE FROM public.matches WHERE id = $1;', [matchId]);
+        }
+        return jsonResponse(200, { success: true, id: matchId });
       }
     }
 

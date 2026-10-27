@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { WARHAWKS_LOGO_URL } from '../../constants';
+import { formatOptionBDate } from '../../utils/date';
 
 const DEFAULT_CRICHEROES_URL = 'https://cricheroes.com/tournament/1999506/warhawk-tournament-s04/matches/live-matches';
 
@@ -152,6 +153,10 @@ export const FixturesResultsView = ({
   const handleScorecardSubmit = (e) => {
     e.preventDefault();
     if (!scoringMatch) return;
+    if (isOrganizer && scoringMatch.teamAId && scoringMatch.teamBId && scoringMatch.teamAId === scoringMatch.teamBId) {
+      alert('Team A and Team B cannot be the same franchise. Please select two distinct registered teams.');
+      return;
+    }
     const rawAOvers = String(scoringMatch.teamAOvers ?? '').trim();
     const rawBOvers = String(scoringMatch.teamBOvers ?? '').trim();
     if (rawAOvers !== '' && (isNaN(Number(rawAOvers)) || Number(rawAOvers) < 0 || Number(rawAOvers) > 100)) {
@@ -164,6 +169,12 @@ export const FixturesResultsView = ({
     }
     const cleanMatch = {
       ...scoringMatch,
+      teamAId: scoringMatch.teamAId,
+      teamBId: scoringMatch.teamBId,
+      round: scoringMatch.round || 'Group Stage',
+      date: scoringMatch.date,
+      time: scoringMatch.time,
+      venue: scoringMatch.venue,
       teamAOvers: rawAOvers === '' ? undefined : parseFloat(rawAOvers),
       teamBOvers: rawBOvers === '' ? undefined : parseFloat(rawBOvers)
     };
@@ -547,6 +558,12 @@ export const FixturesResultsView = ({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {isOrganizer && match.status === 'scheduled' && (
+                      <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded border border-emerald-200 hidden xs:inline-block">
+                        Teams Editable
+                      </span>
+                    )}
+
                     <span
                       className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded capitalize ${
                         match.status === 'live'
@@ -564,8 +581,8 @@ export const FixturesResultsView = ({
                         <button
                           onClick={() => setScoringMatch({ ...match })}
                           className="min-w-[32px] min-h-[32px] p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center cursor-pointer"
-                          title="Update scorecard"
-                          aria-label="Edit match scorecard"
+                          title={match.status === 'scheduled' ? "Edit competing teams & fixture" : "Update match scorecard & teams"}
+                          aria-label={match.status === 'scheduled' ? "Edit competing teams" : "Edit match scorecard"}
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
@@ -646,7 +663,7 @@ export const FixturesResultsView = ({
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-slate-400" />
-                      <span>{match.date} · {match.time}</span>
+                      <span>{formatOptionBDate(match.date)} · {match.time}</span>
                     </span>
                     <span className="flex items-center gap-1 truncate max-w-[140px]">
                       <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
@@ -660,7 +677,9 @@ export const FixturesResultsView = ({
                       isOrganizer ? 'text-emerald-700' : 'text-blue-700'
                     }`}
                   >
-                    {isOrganizer ? 'Edit Scorecard →' : 'View Full Scorecard →'}
+                    {isOrganizer
+                      ? (match.status === 'scheduled' ? 'Edit Teams & Fixture →' : 'Edit Scorecard & Teams →')
+                      : 'View Full Scorecard →'}
                   </button>
                 </div>
               </div>
@@ -780,13 +799,13 @@ export const FixturesResultsView = ({
         </form>
       </Modal>
 
-      {/* Live Scorecard & Result Sign-Off Modal */}
+      {/* Live Scorecard & Match Edit Modal */}
       {scoringMatch && (
         <Modal
           isOpen={true}
           onClose={() => setScoringMatch(null)}
-          title={`Scorecard: Match #${scoringMatch.matchNumber}`}
-          subtitle={`${teams.find(t => t.id === scoringMatch.teamAId)?.name} vs ${teams.find(t => t.id === scoringMatch.teamBId)?.name}`}
+          title={isOrganizer ? (scoringMatch.status === 'scheduled' ? `Edit Scheduled Fixture: Match #${scoringMatch.matchNumber}` : `Scorecard & Match #${scoringMatch.matchNumber}`) : `Scorecard: Match #${scoringMatch.matchNumber}`}
+          subtitle={`${teams.find(t => t.id === scoringMatch.teamAId)?.name || 'Team A'} vs ${teams.find(t => t.id === scoringMatch.teamBId)?.name || 'Team B'}`}
           maxWidth="xl"
         >
           {!isOrganizer && (
@@ -796,158 +815,331 @@ export const FixturesResultsView = ({
             </div>
           )}
           <form onSubmit={handleScorecardSubmit} className="space-y-4 text-xs">
+            {/* Organizer: Editable Competing Teams from Registered Teams */}
+            {isOrganizer ? (
+              <div className="p-3.5 bg-gradient-to-r from-emerald-50/80 via-slate-50 to-blue-50/80 rounded-xl border border-emerald-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900">
+                        Competing Teams (Select Registered Franchise)
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Change Team A or Team B between any registered teams for this scheduled match.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300">
+                    Organizer Editable
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* Team A Dropdown */}
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1.5 shadow-xs">
+                    <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                          style={{ backgroundColor: teams.find(t => t.id === scoringMatch.teamAId)?.primaryColor || '#0284c7' }}
+                        />
+                        <span>Team A (Home Franchise)</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {teams.find(t => t.id === scoringMatch.teamAId)?.shortCode || ''}
+                      </span>
+                    </label>
+                    <select
+                      value={scoringMatch.teamAId}
+                      onChange={e => {
+                        const newId = e.target.value;
+                        setScoringMatch(prev => ({
+                          ...prev,
+                          teamAId: newId,
+                          winnerId: prev.winnerId === prev.teamAId ? newId : (prev.winnerId === prev.teamBId ? prev.winnerId : undefined)
+                        }));
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 bg-white font-semibold text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      {teams.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.shortCode})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Team B Dropdown */}
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1.5 shadow-xs">
+                    <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                          style={{ backgroundColor: teams.find(t => t.id === scoringMatch.teamBId)?.primaryColor || '#dc2626' }}
+                        />
+                        <span>Team B (Away Franchise)</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {teams.find(t => t.id === scoringMatch.teamBId)?.shortCode || ''}
+                      </span>
+                    </label>
+                    <select
+                      value={scoringMatch.teamBId}
+                      onChange={e => {
+                        const newId = e.target.value;
+                        setScoringMatch(prev => ({
+                          ...prev,
+                          teamBId: newId,
+                          winnerId: prev.winnerId === prev.teamBId ? newId : (prev.winnerId === prev.teamAId ? prev.winnerId : undefined)
+                        }));
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 bg-white font-semibold text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      {teams.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.shortCode})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {scoringMatch.teamAId === scoringMatch.teamBId && (
+                  <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Team A and Team B cannot be the same franchise. Please select two distinct registered teams.</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: teams.find(t => t.id === scoringMatch.teamAId)?.primaryColor || '#0284c7' }}
+                  />
+                  <span className="font-bold text-slate-800">
+                    {teams.find(t => t.id === scoringMatch.teamAId)?.name}
+                  </span>
+                </div>
+                <span className="font-bold text-slate-400">VS</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">
+                    {teams.find(t => t.id === scoringMatch.teamBId)?.name}
+                  </span>
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: teams.find(t => t.id === scoringMatch.teamBId)?.primaryColor || '#dc2626' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Organizer: Schedule & Venue Details */}
+            {isOrganizer && (
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <span className="text-[11px] font-bold text-slate-700 block">Schedule & Venue Details</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Round / Stage</label>
+                    <select
+                      value={scoringMatch.round || 'Group Stage'}
+                      onChange={e => setScoringMatch({ ...scoringMatch, round: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="Group Stage">Group Stage</option>
+                      <option value="Quarter Final">Quarter Final</option>
+                      <option value="Semi Final 1">Semi Final 1</option>
+                      <option value="Semi Final 2">Semi Final 2</option>
+                      <option value="Grand Final">Grand Final</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Match Date</label>
+                    <input
+                      type="date"
+                      value={scoringMatch.date ? (String(scoringMatch.date).includes('T') ? String(scoringMatch.date).split('T')[0] : scoringMatch.date) : ''}
+                      onChange={e => setScoringMatch({ ...scoringMatch, date: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Match Time</label>
+                    <input
+                      type="time"
+                      value={scoringMatch.time || ''}
+                      onChange={e => setScoringMatch({ ...scoringMatch, time: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Ground Venue</label>
+                    <input
+                      type="text"
+                      value={scoringMatch.venue || ''}
+                      onChange={e => setScoringMatch({ ...scoringMatch, venue: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <fieldset disabled={!isOrganizer} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Match Status</label>
-                <select
-                  value={scoringMatch.status}
-                  onChange={e => setScoringMatch({ ...scoringMatch, status: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="live">Live In Progress</option>
-                  <option value="completed">Completed (Final Result)</option>
-                  <option value="abandoned">Abandoned / Washout</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Match Status</label>
+                  <select
+                    value={scoringMatch.status}
+                    onChange={e => setScoringMatch({ ...scoringMatch, status: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="live">Live In Progress</option>
+                    <option value="completed">Completed (Final Result)</option>
+                    <option value="abandoned">Abandoned / Washout</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Winning Team</label>
-                <select
-                  value={scoringMatch.winnerId || ''}
-                  onChange={e => setScoringMatch({ ...scoringMatch, winnerId: e.target.value || undefined })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
-                >
-                  <option value="">No Winner / Ongoing</option>
-                  <option value={scoringMatch.teamAId}>{teams.find(t => t.id === scoringMatch.teamAId)?.name}</option>
-                  <option value={scoringMatch.teamBId}>{teams.find(t => t.id === scoringMatch.teamBId)?.name}</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Winning Team</label>
+                  <select
+                    value={scoringMatch.winnerId || ''}
+                    onChange={e => setScoringMatch({ ...scoringMatch, winnerId: e.target.value || undefined })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                  >
+                    <option value="">No Winner / Ongoing</option>
+                    <option value={scoringMatch.teamAId}>{teams.find(t => t.id === scoringMatch.teamAId)?.name || 'Team A'}</option>
+                    <option value={scoringMatch.teamBId}>{teams.find(t => t.id === scoringMatch.teamBId)?.name || 'Team B'}</option>
+                    <option value="tie">Match Tied</option>
+                    <option value="no_result">No Result / Washout</option>
+                  </select>
+                </div>
 
-              {/* Team A Scores */}
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <span className="font-bold text-slate-900 block mb-2">
-                  {teams.find(t => t.id === scoringMatch.teamAId)?.name} Score
-                </span>
-                <div className="space-y-2">
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-0.5">Runs / Wickets (e.g. 188/5)</label>
-                    <input
-                      type="text"
-                      placeholder="188/5"
-                      value={scoringMatch.teamAScore || ''}
-                      onChange={e => setScoringMatch({ ...scoringMatch, teamAScore: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-0.5">Overs Faced</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      placeholder="20.0"
-                      value={scoringMatch.teamAOvers ?? ''}
-                      onChange={e => setScoringMatch({ ...scoringMatch, teamAOvers: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono"
-                    />
+                {/* Team A Scores */}
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-bold text-slate-900 block mb-2">
+                    {teams.find(t => t.id === scoringMatch.teamAId)?.name || 'Team A'} Score
+                  </span>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">Runs / Wickets (e.g. 188/5)</label>
+                      <input
+                        type="text"
+                        placeholder="188/5"
+                        value={scoringMatch.teamAScore || ''}
+                        onChange={e => setScoringMatch({ ...scoringMatch, teamAScore: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">Overs Faced</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        placeholder="20.0"
+                        value={scoringMatch.teamAOvers ?? ''}
+                        onChange={e => setScoringMatch({ ...scoringMatch, teamAOvers: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Team B Scores */}
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <span className="font-bold text-slate-900 block mb-2">
-                  {teams.find(t => t.id === scoringMatch.teamBId)?.name} Score
-                </span>
-                <div className="space-y-2">
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-0.5">Runs / Wickets (e.g. 182/7)</label>
-                    <input
-                      type="text"
-                      placeholder="182/7"
-                      value={scoringMatch.teamBScore || ''}
-                      onChange={e => setScoringMatch({ ...scoringMatch, teamBScore: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-0.5">Overs Faced</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      placeholder="20.0"
-                      value={scoringMatch.teamBOvers ?? ''}
-                      onChange={e => setScoringMatch({ ...scoringMatch, teamBOvers: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono"
-                    />
+                {/* Team B Scores */}
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-bold text-slate-900 block mb-2">
+                    {teams.find(t => t.id === scoringMatch.teamBId)?.name || 'Team B'} Score
+                  </span>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">Runs / Wickets (e.g. 182/7)</label>
+                      <input
+                        type="text"
+                        placeholder="182/7"
+                        value={scoringMatch.teamBScore || ''}
+                        onChange={e => setScoringMatch({ ...scoringMatch, teamBScore: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">Overs Faced</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        placeholder="20.0"
+                        value={scoringMatch.teamBOvers ?? ''}
+                        onChange={e => setScoringMatch({ ...scoringMatch, teamBOvers: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="col-span-2">
-                <label className="block font-semibold text-slate-700 mb-1">Official Result Summary</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Apex Titans won by 6 runs"
-                  value={scoringMatch.resultSummary || ''}
-                  onChange={e => setScoringMatch({ ...scoringMatch, resultSummary: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold"
-                />
-              </div>
+                <div className="col-span-2">
+                  <label className="block font-semibold text-slate-700 mb-1">Official Result Summary</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Apex Titans won by 6 runs"
+                    value={scoringMatch.resultSummary || ''}
+                    onChange={e => setScoringMatch({ ...scoringMatch, resultSummary: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold"
+                  />
+                </div>
 
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block font-semibold text-slate-700 mb-1">Player of the Match</label>
-                <select
-                  value={scoringMatch.manOfTheMatchPlayerId || ''}
-                  onChange={e => setScoringMatch({ ...scoringMatch, manOfTheMatchPlayerId: e.target.value || undefined })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300"
-                >
-                  <option value="">Select Player...</option>
-                  {players
-                    .filter(p => p.teamId === scoringMatch.teamAId || p.teamId === scoringMatch.teamBId)
-                    .map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({teams.find(t => t.id === p.teamId)?.shortCode})
-                      </option>
-                    ))}
-                </select>
-              </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block font-semibold text-slate-700 mb-1">Player of the Match</label>
+                  <select
+                    value={scoringMatch.manOfTheMatchPlayerId || ''}
+                    onChange={e => setScoringMatch({ ...scoringMatch, manOfTheMatchPlayerId: e.target.value || undefined })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300"
+                  >
+                    <option value="">Select Player...</option>
+                    {players
+                      .filter(p => p.teamId === scoringMatch.teamAId || p.teamId === scoringMatch.teamBId)
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({teams.find(t => t.id === p.teamId)?.shortCode})
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">CricHeroes Scorecard ID (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="CH-2026-M04"
-                  value={scoringMatch.cricheroesMatchId || ''}
-                  onChange={e => setScoringMatch({ ...scoringMatch, cricheroesMatchId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono"
-                />
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">CricHeroes Scorecard ID (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="CH-2026-M04"
+                    value={scoringMatch.cricheroesMatchId || ''}
+                    onChange={e => setScoringMatch({ ...scoringMatch, cricheroesMatchId: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono"
+                  />
+                </div>
               </div>
-            </div>
-          </fieldset>
+            </fieldset>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={() => setScoringMatch(null)}
-              className="px-4 py-1.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 cursor-pointer"
-            >
-              {isOrganizer ? 'Cancel' : 'Close Scorecard'}
-            </button>
-            {isOrganizer && (
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
               <button
-                type="submit"
-                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs cursor-pointer"
+                type="button"
+                onClick={() => setScoringMatch(null)}
+                className="px-4 py-1.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 cursor-pointer"
               >
-                Sign-off & Update Standings
+                {isOrganizer ? 'Cancel' : 'Close Scorecard'}
               </button>
-            )}
-          </div>
-        </form>
-      </Modal>
+              {isOrganizer && (
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs cursor-pointer"
+                >
+                  {scoringMatch.status === 'scheduled' ? 'Save Teams & Match Fixture' : 'Sign-off & Update Standings'}
+                </button>
+              )}
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Configure CricHeroes URL Modal (Organizer Exclusive) */}

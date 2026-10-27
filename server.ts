@@ -989,6 +989,142 @@ app.delete('/api/players/:id', requireOrganizer, async (req: Request, res: Respo
 });
 
 // ==============================================================================
+// 4b. MATCHES API (Public Reader + Organizer Protected Mutations)
+// ==============================================================================
+const mapMatchRow = (row: any) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  matchNumber: Number(row.match_number),
+  round: row.round || 'Group Stage',
+  teamAId: row.team_a_id,
+  teamBId: row.team_b_id,
+  date: row.date ? (row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0]) : new Date().toISOString().split('T')[0],
+  time: row.time || '19:30',
+  venue: row.venue || 'Stadium Ground',
+  status: row.status || 'scheduled',
+  tossWinnerId: row.toss_winner_id || undefined,
+  tossDecision: row.toss_decision || undefined,
+  teamAScore: row.team_a_score || '',
+  teamAOvers: row.team_a_overs !== null && row.team_a_overs !== undefined ? Number(row.team_a_overs) : undefined,
+  teamBScore: row.team_b_score || '',
+  teamBOvers: row.team_b_overs !== null && row.team_b_overs !== undefined ? Number(row.team_b_overs) : undefined,
+  winnerId: row.winner_id || undefined,
+  resultSummary: row.result_summary || '',
+  manOfTheMatchPlayerId: row.man_of_the_match_player_id || undefined,
+  isImported: Boolean(row.is_imported),
+  importSource: row.import_source || 'manual',
+  cricheroesMatchId: row.cricheroes_match_id || undefined,
+  createdAt: row.created_at
+});
+
+app.get('/api/matches', async (req: Request, res: Response) => {
+  try {
+    const { tournamentId } = req.query;
+    const query = tournamentId
+      ? 'SELECT * FROM public.matches WHERE tournament_id = $1 ORDER BY match_number ASC;'
+      : 'SELECT * FROM public.matches ORDER BY match_number ASC;';
+    const params = tournamentId ? [tournamentId] : [];
+    const result = await pool.query(query, params);
+    return res.json(result.rows.map(mapMatchRow));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/matches', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const m = req.body;
+    const query = `
+      INSERT INTO public.matches (
+        id, tournament_id, match_number, round, team_a_id, team_b_id,
+        date, time, venue, status, is_imported, import_source
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *;
+    `;
+    const newId = m.id || `mat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const values = [
+      newId,
+      m.tournamentId,
+      Number(m.matchNumber) || 1,
+      m.round || 'Group Stage',
+      m.teamAId,
+      m.teamBId,
+      m.date || new Date().toISOString().split('T')[0],
+      m.time || '19:30',
+      m.venue || 'Stadium Ground',
+      m.status || 'scheduled',
+      Boolean(m.isImported),
+      m.importSource || 'manual'
+    ];
+    const result = await pool.query(query, values);
+    return res.status(201).json(mapMatchRow(result.rows[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/matches/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const fieldMap: Record<string, string> = {
+      teamAId: 'team_a_id',
+      teamBId: 'team_b_id',
+      matchNumber: 'match_number',
+      round: 'round',
+      date: 'date',
+      time: 'time',
+      venue: 'venue',
+      status: 'status',
+      tossWinnerId: 'toss_winner_id',
+      tossDecision: 'toss_decision',
+      teamAScore: 'team_a_score',
+      teamAOvers: 'team_a_overs',
+      teamBScore: 'team_b_score',
+      teamBOvers: 'team_b_overs',
+      winnerId: 'winner_id',
+      resultSummary: 'result_summary',
+      manOfTheMatchPlayerId: 'man_of_the_match_player_id',
+      cricheroesMatchId: 'cricheroes_match_id'
+    };
+
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    for (const [key, val] of Object.entries(updates)) {
+      if (fieldMap[key]) {
+        setClauses.push(`${fieldMap[key]} = $${idx}`);
+        values.push(val);
+        idx++;
+      }
+    }
+
+    if (setClauses.length === 0) return res.status(400).json({ error: 'No fields to update.' });
+
+    values.push(id);
+    const query = `UPDATE public.matches SET ${setClauses.join(', ')} WHERE id = $${idx} RETURNING *;`;
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Match not found.' });
+    }
+    return res.json(mapMatchRow(result.rows[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/matches/:id', requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM public.matches WHERE id = $1;', [id]);
+    return res.json({ success: true, id });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================================================================
 // 5. REGISTRATIONS API (Public Registration + Organizer Status Updates)
 // ==============================================================================
 app.get('/api/registrations', async (req: Request, res: Response) => {

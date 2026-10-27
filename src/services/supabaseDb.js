@@ -727,6 +727,17 @@ export const supabaseDb = {
 
   // Matches
   async getMatches(tournamentId) {
+    try {
+      const q = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : '';
+      const res = await fetch(`/api/matches${q}`);
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          return rows.map(mapMatchFromDb);
+        }
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
@@ -741,6 +752,24 @@ export const supabaseDb = {
   },
 
   async createMatch(m) {
+    const session = getOrganizerSession();
+    const token = session?.token || '';
+
+    try {
+      const res = await fetch('/api/matches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(m)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return mapMatchFromDb(data);
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
@@ -765,10 +794,34 @@ export const supabaseDb = {
   },
 
   async updateMatch(id, updates) {
+    const session = getOrganizerSession();
+    const token = session?.token || '';
+
+    try {
+      const res = await fetch(`/api/matches/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return mapMatchFromDb(data);
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
     const row = {};
+    if (updates.teamAId !== undefined) row.team_a_id = updates.teamAId;
+    if (updates.teamBId !== undefined) row.team_b_id = updates.teamBId;
+    if (updates.round !== undefined) row.round = updates.round;
+    if (updates.date !== undefined) row.date = updates.date;
+    if (updates.time !== undefined) row.time = updates.time;
+    if (updates.venue !== undefined) row.venue = updates.venue;
     if (updates.status !== undefined) row.status = updates.status;
     if (updates.tossWinnerId !== undefined) row.toss_winner_id = updates.tossWinnerId;
     if (updates.tossDecision !== undefined) row.toss_decision = updates.tossDecision;
@@ -786,6 +839,19 @@ export const supabaseDb = {
   },
 
   async deleteMatch(id) {
+    const session = getOrganizerSession();
+    const token = session?.token || '';
+
+    try {
+      const res = await fetch(`/api/matches/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) return;
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
