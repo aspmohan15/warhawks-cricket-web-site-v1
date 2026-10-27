@@ -1209,10 +1209,6 @@ class TournamentDatabase {
     if (list.length === 0) {
       const defaultRules = getDefaultEditionRules(tournamentId);
       this.schema.rules = [...(this.schema.rules || []), ...defaultRules];
-      this.saveToStorage();
-      if (isSupabaseConfigured()) {
-        defaultRules.forEach(r => supabaseDb.createRule(r).catch(() => null));
-      }
       return defaultRules;
     }
     return list;

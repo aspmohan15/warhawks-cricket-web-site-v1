@@ -1087,46 +1087,107 @@ export const supabaseDb = {
   },
 
   async createRule(r) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+
+    try {
+      const res = await fetch('/api/rules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(r)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return mapRuleFromDb(data);
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
-    const row = {
-      id: r.id,
-      tournament_id: r.tournamentId,
-      title: r.title,
-      category: r.category,
-      content: r.content,
-      video_url: r.videoUrl || null,
-      is_published: r.isPublished ?? true
-    };
-
-    const { data, error } = await client.from('rules').insert([row]).select().single();
-    if (error) throw error;
-    return mapRuleFromDb(data);
+    try {
+      const row = {
+        id: r.id,
+        tournament_id: r.tournamentId,
+        title: r.title,
+        category: r.category,
+        content: r.content,
+        video_url: r.videoUrl || null,
+        is_published: r.isPublished ?? true
+      };
+      const { data, error } = await client.from('rules').insert([row]).select().single();
+      if (error) return null;
+      return mapRuleFromDb(data);
+    } catch {
+      return null;
+    }
   },
 
   async updateRule(id, updates) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+
+    try {
+      const res = await fetch(`/api/rules/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return mapRuleFromDb(data);
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
-    const row = {};
-    if (updates.title !== undefined) row.title = updates.title;
-    if (updates.category !== undefined) row.category = updates.category;
-    if (updates.content !== undefined) row.content = updates.content;
-    if (updates.videoUrl !== undefined) row.video_url = updates.videoUrl;
-    if (updates.isPublished !== undefined) row.is_published = updates.isPublished;
+    try {
+      const row = {};
+      if (updates.title !== undefined) row.title = updates.title;
+      if (updates.category !== undefined) row.category = updates.category;
+      if (updates.content !== undefined) row.content = updates.content;
+      if (updates.videoUrl !== undefined) row.video_url = updates.videoUrl;
+      if (updates.isPublished !== undefined) row.is_published = updates.isPublished;
 
-    const { data, error } = await client.from('rules').update(row).eq('id', id).select().single();
-    if (error) throw error;
-    return mapRuleFromDb(data);
+      const { data, error } = await client.from('rules').update(row).eq('id', id).select().single();
+      if (error) return null;
+      return mapRuleFromDb(data);
+    } catch {
+      return null;
+    }
   },
 
   async deleteRule(id) {
+    const session = getOrganizerSession();
+    const token = session?.token;
+
+    try {
+      const res = await fetch(`/api/rules/${id}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) return { success: true, id };
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
-    const { error } = await client.from('rules').delete().eq('id', id);
-    if (error) throw error;
+    try {
+      const { error } = await client.from('rules').delete().eq('id', id);
+      if (error) return null;
+      return { success: true, id };
+    } catch {
+      return null;
+    }
   },
 
   // Auction Config & Bids
