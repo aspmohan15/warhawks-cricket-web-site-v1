@@ -59,6 +59,44 @@ const jsonResponse = (statusCode, data) => ({
   body: JSON.stringify(data)
 });
 
+const mapAnnouncementRow = (row) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  message: row.message,
+  displayOrder: Number(row.display_order ?? 0),
+  isActive: Boolean(row.is_active),
+  createdBy: row.created_by,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
+const mapExpenseRow = (row) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  title: row.title,
+  category: row.category,
+  amount: Number(row.amount) || 0,
+  advanceAmount: Number(row.advance_amount || 0),
+  date: row.date ? (row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0]) : new Date().toISOString().split('T')[0],
+  vendorName: row.vendor_name || '',
+  receiptUrl: row.receipt_url || '',
+  paymentMode: row.payment_mode || 'Bank Transfer',
+  paymentStatus: row.payment_status || 'paid',
+  notes: row.notes || '',
+  createdAt: row.created_at
+});
+
+const mapRuleRow = (row) => ({
+  id: row.id,
+  tournamentId: row.tournament_id,
+  title: row.title,
+  category: row.category,
+  content: row.content,
+  videoUrl: row.video_url || '',
+  isPublished: Boolean(row.is_published),
+  updatedAt: row.updated_at
+});
+
 export async function handler(event) {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -79,6 +117,7 @@ export async function handler(event) {
   if (!path.startsWith('/')) path = '/' + path;
 
   const method = event.httpMethod;
+  const queryParams = event.queryStringParameters || {};
   let body = {};
   if (event.body) {
     try {
@@ -436,6 +475,218 @@ export async function handler(event) {
         }
         return jsonResponse(200, { success: true, id: tournamentId });
       }
+
+      if (method === 'POST' && !tournamentId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const t = body;
+        if (pool) {
+          const query = `
+            INSERT INTO public.tournaments (
+              id, name, edition_number, year, format, status, organizer, organizer_role,
+              organizer_branch, start_date, end_date, venue, city, registration_open,
+              registration_start_date, registration_end_date, total_budget_points_per_team,
+              points_per_win, points_per_tie, max_squad_size, min_squad_size,
+              max_overseas_players, description, upi_qr_code_url, upi_id, registration_fee,
+              is_archived
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8,
+              $9, $10, $11, $12, $13, $14,
+              $15, $16, $17, $18, $19, $20, $21,
+              $22, $23, $24, $25, $26, $27
+            ) RETURNING *;
+          `;
+          const values = [
+            t.id, t.name, t.editionNumber, t.year, t.format || 'T20', t.status || 'upcoming',
+            t.organizer || 'Warhawks', t.organizerRole || 'Official Tournament Organizer & Host',
+            t.organizerBranch || 'Warhawks Tournament Operations', t.startDate, t.endDate,
+            t.venue, t.city, Boolean(t.registrationOpen), t.registrationStartDate || null,
+            t.registrationEndDate || null, t.totalBudgetPointsPerTeam || 10000000,
+            t.pointsPerWin ?? 2, t.pointsPerTie ?? 1, t.maxSquadSize || 18, t.minSquadSize || 14,
+            t.maxOverseasPlayers || 4, t.description || '', t.upiQrCodeUrl || '',
+            t.upiId || 'warhawks.sports@icici', Number(t.registrationFee) || 1500,
+            Boolean(t.isArchived)
+          ];
+          const res = await pool.query(query, values);
+          return jsonResponse(201, res.rows[0]);
+        }
+        return jsonResponse(201, t);
+      }
+
+      if (method === 'PATCH' && tournamentId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          const updates = body;
+          const fieldMap = {
+            name: 'name', editionNumber: 'edition_number', year: 'year', format: 'format',
+            status: 'status', startDate: 'start_date', endDate: 'end_date', venue: 'venue',
+            city: 'city', registrationOpen: 'registration_open', registrationStartDate: 'registration_start_date',
+            registrationEndDate: 'registration_end_date', totalBudgetPointsPerTeam: 'total_budget_points_per_team',
+            pointsPerWin: 'points_per_win', pointsPerTie: 'points_per_tie', maxSquadSize: 'max_squad_size',
+            minSquadSize: 'min_squad_size', maxOverseasPlayers: 'max_overseas_players', description: 'description',
+            upiQrCodeUrl: 'upi_qr_code_url', upiId: 'upi_id', registrationFee: 'registration_fee', isArchived: 'is_archived'
+          };
+          const setClauses = ['updated_at = timezone(\'utc\', now())'];
+          const values = [tournamentId];
+          Object.keys(updates).forEach(key => {
+            const col = fieldMap[key];
+            if (col) {
+              values.push(updates[key]);
+              setClauses.push(`${col} = $${values.length}`);
+            }
+          });
+          const res = await pool.query(
+            `UPDATE public.tournaments SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`,
+            values
+          );
+          if (res.rows.length === 0) return jsonResponse(404, { error: 'Tournament not found.' });
+          return jsonResponse(200, res.rows[0]);
+        }
+        return jsonResponse(200, { id: tournamentId, ...body });
+      }
+    }
+
+    // Teams API
+    if (path === '/teams' || path.startsWith('/teams/')) {
+      const match = path.match(/^\/teams\/([^/]+)$/);
+      const teamId = match ? match[1] : null;
+
+      if (method === 'POST' && !teamId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const t = body;
+        const newId = t.id || `team-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        if (pool) {
+          const res = await pool.query(
+            `INSERT INTO public.teams (
+              id, tournament_id, name, short_code, city, primary_color, secondary_color,
+              logo_url, owner_name, budget_total, budget_spent, budget_remaining, total_players_assigned
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *;`,
+            [
+              newId, t.tournamentId, t.name, (t.shortCode || 'TEAM').toUpperCase(), t.city || '',
+              t.primaryColor || '#0284c7', t.secondaryColor || '#0f172a', t.logoUrl || null,
+              t.ownerName || '', t.budgetTotal || 10000000, t.budgetSpent || 0,
+              t.budgetRemaining || t.budgetTotal || 10000000, t.totalPlayersAssigned || 0
+            ]
+          );
+          return jsonResponse(201, res.rows[0]);
+        }
+        return jsonResponse(201, { id: newId, ...t });
+      }
+
+      if (method === 'PATCH' && teamId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          const updates = body;
+          const fieldMap = {
+            name: 'name', shortCode: 'short_code', city: 'city', primaryColor: 'primary_color',
+            secondaryColor: 'secondary_color', logoUrl: 'logo_url', ownerName: 'owner_name',
+            budgetTotal: 'budget_total', budgetSpent: 'budget_spent', budgetRemaining: 'budget_remaining',
+            totalPlayersAssigned: 'total_players_assigned', captainPlayerId: 'captain_player_id'
+          };
+          const setClauses = [];
+          const values = [teamId];
+          Object.keys(updates).forEach(key => {
+            const col = fieldMap[key];
+            if (col) {
+              values.push(updates[key]);
+              setClauses.push(`${col} = $${values.length}`);
+            }
+          });
+          if (setClauses.length > 0) {
+            const res = await pool.query(`UPDATE public.teams SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`, values);
+            if (res.rows.length === 0) return jsonResponse(404, { error: 'Team not found.' });
+            return jsonResponse(200, res.rows[0]);
+          }
+        }
+        return jsonResponse(200, { id: teamId, ...body });
+      }
+
+      if (method === 'DELETE' && teamId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          await pool.query('DELETE FROM public.teams WHERE id = $1;', [teamId]);
+        }
+        return jsonResponse(200, { success: true, id: teamId });
+      }
+    }
+
+    // Players API
+    if (path === '/players' || path.startsWith('/players/')) {
+      const match = path.match(/^\/players\/([^/]+)$/);
+      const playerId = match ? match[1] : null;
+
+      if (method === 'POST' && !playerId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const p = body;
+        const newId = p.id || `ply-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        if (pool) {
+          const res = await pool.query(
+            `INSERT INTO public.players (
+              id, tournament_id, name, jersey_number, role, batting_style, bowling_style,
+              is_overseas, photo_url, base_price, is_captain, is_vice_captain, auction_status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *;`,
+            [
+              newId, p.tournamentId, p.name, p.jerseyNumber || null, p.role || 'All-Rounder',
+              p.battingStyle || 'Right-hand bat', p.bowlingStyle || 'Right-arm medium',
+              Boolean(p.isOverseas), p.photoUrl || null, p.basePrice || 100000,
+              Boolean(p.isCaptain), Boolean(p.isViceCaptain), p.auctionStatus || 'available'
+            ]
+          );
+          return jsonResponse(201, res.rows[0]);
+        }
+        return jsonResponse(201, { id: newId, ...p });
+      }
+
+      if (method === 'PATCH' && playerId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          const updates = body;
+          const fieldMap = {
+            name: 'name', jerseyNumber: 'jersey_number', role: 'role', battingStyle: 'batting_style',
+            bowlingStyle: 'bowling_style', isOverseas: 'is_overseas', photoUrl: 'photo_url',
+            basePrice: 'base_price', isCaptain: 'is_captain', isViceCaptain: 'is_vice_captain',
+            auctionStatus: 'auction_status', teamId: 'team_id', soldPrice: 'sold_price'
+          };
+          const setClauses = [];
+          const values = [playerId];
+          Object.keys(updates).forEach(key => {
+            const col = fieldMap[key];
+            if (col) {
+              values.push(updates[key]);
+              setClauses.push(`${col} = $${values.length}`);
+            }
+          });
+          if (setClauses.length > 0) {
+            const res = await pool.query(`UPDATE public.players SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`, values);
+            if (res.rows.length === 0) return jsonResponse(404, { error: 'Player not found.' });
+            return jsonResponse(200, res.rows[0]);
+          }
+        }
+        return jsonResponse(200, { id: playerId, ...body });
+      }
+
+      if (method === 'DELETE' && playerId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          await pool.query('DELETE FROM public.players WHERE id = $1;', [playerId]);
+        }
+        return jsonResponse(200, { success: true, id: playerId });
+      }
     }
 
     // 8. Admins API
@@ -624,6 +875,331 @@ export async function handler(event) {
           }
           return jsonResponse(200, { success: true, id: targetId, isActive });
         }
+      }
+    }
+
+    // 9. Announcements API
+    if (path === '/announcements' || path.startsWith('/announcements/')) {
+      const match = path.match(/^\/announcements\/([^/]+)$/);
+      const annId = match ? match[1] : null;
+
+      if (path === '/announcements/swap' && method === 'POST') {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const { id1, id2 } = body;
+        if (!id1 || !id2) {
+          return jsonResponse(400, { error: 'Both id1 and id2 are required.' });
+        }
+        if (pool) {
+          const res1 = await pool.query('SELECT id, display_order FROM public.announcements WHERE id = $1 LIMIT 1;', [String(id1)]);
+          const res2 = await pool.query('SELECT id, display_order FROM public.announcements WHERE id = $1 LIMIT 1;', [String(id2)]);
+          if (res1.rows.length === 0 || res2.rows.length === 0) {
+            return jsonResponse(404, { error: 'One or both announcements not found.' });
+          }
+          const order1 = Number(res1.rows[0].display_order);
+          const order2 = Number(res2.rows[0].display_order);
+          await pool.query('UPDATE public.announcements SET display_order = $1, updated_at = timezone(\'utc\', now()) WHERE id = $2;', [order2, String(id1)]);
+          await pool.query('UPDATE public.announcements SET display_order = $1, updated_at = timezone(\'utc\', now()) WHERE id = $2;', [order1, String(id2)]);
+          const updated = await pool.query('SELECT * FROM public.announcements ORDER BY display_order ASC, created_at ASC;');
+          return jsonResponse(200, { success: true, items: updated.rows.map(mapAnnouncementRow) });
+        }
+        return jsonResponse(200, { success: true, items: [] });
+      }
+
+      if (path === '/announcements/reorder' && method === 'POST') {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const { items } = body;
+        if (!Array.isArray(items) || items.length === 0) {
+          return jsonResponse(400, { error: 'items array is required.' });
+        }
+        if (pool) {
+          for (const it of items) {
+            await pool.query('UPDATE public.announcements SET display_order = $1, updated_at = timezone(\'utc\', now()) WHERE id = $2;', [Number(it.displayOrder), String(it.id)]);
+          }
+          const updated = await pool.query('SELECT * FROM public.announcements ORDER BY display_order ASC, created_at ASC;');
+          return jsonResponse(200, { success: true, items: updated.rows.map(mapAnnouncementRow) });
+        }
+        return jsonResponse(200, { success: true, items: [] });
+      }
+
+      if (method === 'GET' && !annId) {
+        if (pool) {
+          const res = await pool.query('SELECT * FROM public.announcements ORDER BY display_order ASC, created_at ASC;');
+          return jsonResponse(200, res.rows.map(mapAnnouncementRow));
+        }
+        return jsonResponse(200, []);
+      }
+
+      if (method === 'POST' && !annId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const { message, tournamentId } = body;
+        if (!message?.trim()) {
+          return jsonResponse(400, { error: 'Message cannot be empty.' });
+        }
+        const newId = body.id || `ann-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`;
+        if (pool) {
+          const countRes = await pool.query('SELECT COALESCE(MAX(display_order), -1) as max_order FROM public.announcements;');
+          const nextOrder = Number(countRes.rows[0].max_order) + 1;
+          const insertRes = await pool.query(
+            `INSERT INTO public.announcements (id, tournament_id, message, display_order, is_active, created_by, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, true, $5, timezone('utc', now()), timezone('utc', now()))
+             RETURNING *;`,
+            [newId, tournamentId || null, message.trim(), nextOrder, body.createdBy || 'Organizer']
+          );
+          return jsonResponse(201, mapAnnouncementRow(insertRes.rows[0]));
+        }
+        return jsonResponse(201, { id: newId, message, displayOrder: 0, isActive: true });
+      }
+
+      if (method === 'PATCH' && annId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          const { message, isActive } = body;
+          const updates = [];
+          const values = [annId];
+          if (message !== undefined) {
+            values.push(message.trim());
+            updates.push(`message = $${values.length}`);
+          }
+          if (isActive !== undefined) {
+            values.push(Boolean(isActive));
+            updates.push(`is_active = $${values.length}`);
+          }
+          updates.push('updated_at = timezone(\'utc\', now())');
+          const res = await pool.query(
+            `UPDATE public.announcements SET ${updates.join(', ')} WHERE id = $1 RETURNING *;`,
+            values
+          );
+          if (res.rows.length === 0) return jsonResponse(404, { error: 'Announcement not found.' });
+          return jsonResponse(200, mapAnnouncementRow(res.rows[0]));
+        }
+        return jsonResponse(200, { id: annId, ...body });
+      }
+
+      if (method === 'DELETE' && annId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          await pool.query('DELETE FROM public.announcements WHERE id = $1;', [annId]);
+        }
+        return jsonResponse(200, { success: true, id: annId });
+      }
+    }
+
+    // 10. Expenses API
+    if (path === '/expenses' || path.startsWith('/expenses/')) {
+      const match = path.match(/^\/expenses\/([^/]+)$/);
+      const expId = match ? match[1] : null;
+      const tId = queryParams.tournamentId;
+
+      if (method === 'GET' && !expId) {
+        if (pool) {
+          const query = tId
+            ? 'SELECT * FROM public.expenses WHERE tournament_id = $1 ORDER BY date DESC, created_at DESC;'
+            : 'SELECT * FROM public.expenses ORDER BY date DESC, created_at DESC;';
+          const params = tId ? [tId] : [];
+          const res = await pool.query(query, params);
+          return jsonResponse(200, res.rows.map(mapExpenseRow));
+        }
+        return jsonResponse(200, []);
+      }
+
+      if (method === 'POST' && !expId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const exp = body;
+        if (!exp.title?.trim()) {
+          return jsonResponse(400, { error: 'Expense title is required.' });
+        }
+        const newId = exp.id || `exp-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`;
+        if (pool) {
+          const res = await pool.query(
+            `INSERT INTO public.expenses (id, tournament_id, title, category, amount, advance_amount, date, vendor_name, receipt_url, payment_mode, payment_status, notes, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, timezone('utc', now()))
+             ON CONFLICT (id) DO UPDATE SET
+               title = EXCLUDED.title,
+               category = EXCLUDED.category,
+               amount = EXCLUDED.amount,
+               advance_amount = EXCLUDED.advance_amount,
+               date = EXCLUDED.date,
+               vendor_name = EXCLUDED.vendor_name,
+               receipt_url = EXCLUDED.receipt_url,
+               payment_mode = EXCLUDED.payment_mode,
+               payment_status = EXCLUDED.payment_status,
+               notes = EXCLUDED.notes
+             RETURNING *;`,
+            [
+              newId,
+              exp.tournamentId,
+              exp.title.trim(),
+              exp.category || 'Miscellaneous',
+              Number(exp.amount) || 0,
+              Number(exp.advanceAmount) || 0,
+              exp.date || new Date().toISOString().split('T')[0],
+              exp.vendorName || '',
+              exp.receiptUrl || '',
+              exp.paymentMode || 'Bank Transfer',
+              exp.paymentStatus || 'paid',
+              exp.notes || ''
+            ]
+          );
+          return jsonResponse(201, mapExpenseRow(res.rows[0]));
+        }
+        return jsonResponse(201, { id: newId, ...exp });
+      }
+
+      if (method === 'PATCH' && expId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          const updates = body;
+          const fieldMap = {
+            title: 'title',
+            category: 'category',
+            amount: 'amount',
+            advanceAmount: 'advance_amount',
+            date: 'date',
+            vendorName: 'vendor_name',
+            receiptUrl: 'receipt_url',
+            paymentMode: 'payment_mode',
+            paymentStatus: 'payment_status',
+            notes: 'notes'
+          };
+          const setClauses = [];
+          const values = [expId];
+          Object.keys(updates).forEach(key => {
+            const col = fieldMap[key];
+            if (col) {
+              values.push(updates[key]);
+              setClauses.push(`${col} = $${values.length}`);
+            }
+          });
+          if (setClauses.length === 0) return jsonResponse(400, { error: 'No valid update fields.' });
+          const res = await pool.query(
+            `UPDATE public.expenses SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`,
+            values
+          );
+          if (res.rows.length === 0) return jsonResponse(404, { error: 'Expense not found.' });
+          return jsonResponse(200, mapExpenseRow(res.rows[0]));
+        }
+        return jsonResponse(200, { id: expId, ...body });
+      }
+
+      if (method === 'DELETE' && expId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          await pool.query('DELETE FROM public.expenses WHERE id = $1;', [expId]);
+        }
+        return jsonResponse(200, { success: true, id: expId });
+      }
+    }
+
+    // 11. Rules API
+    if (path === '/rules' || path.startsWith('/rules/')) {
+      const match = path.match(/^\/rules\/([^/]+)$/);
+      const ruleId = match ? match[1] : null;
+      const tId = queryParams.tournamentId;
+
+      if (method === 'GET' && !ruleId) {
+        if (pool) {
+          const query = tId
+            ? 'SELECT * FROM public.rules WHERE tournament_id = $1 ORDER BY id ASC;'
+            : 'SELECT * FROM public.rules ORDER BY id ASC;';
+          const params = tId ? [tId] : [];
+          const res = await pool.query(query, params);
+          return jsonResponse(200, res.rows.map(mapRuleRow));
+        }
+        return jsonResponse(200, []);
+      }
+
+      if (method === 'POST' && !ruleId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        const r = body;
+        if (!r.title?.trim() || !r.tournamentId) {
+          return jsonResponse(400, { error: 'Title and tournamentId are required.' });
+        }
+        const newId = r.id || `rule-${Date.now().toString(36)}`;
+        if (pool) {
+          const res = await pool.query(
+            `INSERT INTO public.rules (id, tournament_id, title, category, content, video_url, is_published, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, timezone('utc', now()))
+             ON CONFLICT (id) DO UPDATE SET
+               title = EXCLUDED.title,
+               category = EXCLUDED.category,
+               content = EXCLUDED.content,
+               video_url = EXCLUDED.video_url,
+               is_published = EXCLUDED.is_published,
+               updated_at = timezone('utc', now())
+             RETURNING *;`,
+            [
+              newId,
+              r.tournamentId,
+              r.title.trim(),
+              r.category || 'Tournament general',
+              r.content || '',
+              r.videoUrl || '',
+              r.isPublished ?? true
+            ]
+          );
+          return jsonResponse(201, mapRuleRow(res.rows[0]));
+        }
+        return jsonResponse(201, { id: newId, ...r });
+      }
+
+      if (method === 'PATCH' && ruleId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          const updates = body;
+          const fieldMap = {
+            title: 'title',
+            category: 'category',
+            content: 'content',
+            videoUrl: 'video_url',
+            isPublished: 'is_published'
+          };
+          const setClauses = ['updated_at = timezone(\'utc\', now())'];
+          const values = [ruleId];
+          Object.keys(updates).forEach(key => {
+            const col = fieldMap[key];
+            if (col) {
+              values.push(updates[key]);
+              setClauses.push(`${col} = $${values.length}`);
+            }
+          });
+          const res = await pool.query(
+            `UPDATE public.rules SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *;`,
+            values
+          );
+          if (res.rows.length === 0) return jsonResponse(404, { error: 'Rule not found.' });
+          return jsonResponse(200, mapRuleRow(res.rows[0]));
+        }
+        return jsonResponse(200, { id: ruleId, ...body });
+      }
+
+      if (method === 'DELETE' && ruleId) {
+        if (!verifyOrganizerToken(token)) {
+          return jsonResponse(403, { error: 'Forbidden: Organizer session required.' });
+        }
+        if (pool) {
+          await pool.query('DELETE FROM public.rules WHERE id = $1;', [ruleId]);
+        }
+        return jsonResponse(200, { success: true, id: ruleId });
       }
     }
 

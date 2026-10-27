@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { DEFAULT_ORGANIZER_NAME, ORGANIZER_DETAILS, WARHAWKS_LOGO_URL } from '../../constants';
 import { AnnouncementsManager } from '../dashboard/AnnouncementsManager';
+import { formatTournamentDateRange, formatOptionBDate } from '../../utils/date';
 
 export const DashboardView = ({
   tournament,
@@ -177,7 +178,7 @@ export const DashboardView = ({
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>{tournament?.startDate} to {tournament?.endDate}</span>
+                <span>{formatTournamentDateRange(tournament?.startDate, tournament?.endDate)}</span>
               </span>
               <span className="flex items-center gap-1.5 font-medium">
                 <span
@@ -287,7 +288,7 @@ export const DashboardView = ({
                       <span className="font-semibold text-slate-700 truncate">Match #{match.matchNumber} · {match.round}</span>
                       <span className="flex items-center gap-1.5 font-medium shrink-0 text-[11px] sm:text-xs">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {match.date}
+                        {formatOptionBDate(match.date)}
                       </span>
                     </div>
 
