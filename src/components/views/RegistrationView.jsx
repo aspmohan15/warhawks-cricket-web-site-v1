@@ -21,7 +21,8 @@ import {
   Users,
   Coffee,
   QrCode,
-  Copy
+  Copy,
+  Smartphone
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { DEFAULT_WARHAWKS_UPI } from '../../services/supabaseStorage';
@@ -36,6 +37,7 @@ import { formatPhoneNumber } from '../../utils/phone';
 
 export const RegistrationView = ({
   tournament,
+  settings = {},
   registrations,
   sponsors = [],
   currentUser,
@@ -163,11 +165,21 @@ export const RegistrationView = ({
     });
   };
 
+  const [copiedUpiMobile, setCopiedUpiMobile] = useState(false);
+
   const handleCopyUpiId = (upiId) => {
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(upiId);
       setCopiedUpi(true);
       setTimeout(() => setCopiedUpi(false), 2000);
+    }
+  };
+
+  const handleCopyUpiMobile = (mobile) => {
+    if (navigator?.clipboard?.writeText && mobile) {
+      navigator.clipboard.writeText(mobile);
+      setCopiedUpiMobile(true);
+      setTimeout(() => setCopiedUpiMobile(false), 2000);
     }
   };
 
@@ -923,7 +935,7 @@ export const RegistrationView = ({
                         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center shrink-0 w-48 text-center">
                           <div className="w-40 h-40 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center border border-slate-200 relative group">
                             <img
-                              src={tournament?.upiQrCodeUrl || DEFAULT_WARHAWKS_UPI.defaultQrCodeUrl}
+                              src={tournament?.upiQrCodeUrl || settings?.upiQrCodeUrl || DEFAULT_WARHAWKS_UPI.defaultQrCodeUrl}
                               alt="Warhawks Organizer Official UPI QR Code"
                               className="w-full h-full object-cover"
                             />
@@ -951,7 +963,7 @@ export const RegistrationView = ({
                             <div className="flex items-center justify-between text-slate-600">
                               <span>Player Registration Fee:</span>
                               <span className="font-mono font-bold text-slate-900">
-                                ₹{tournament?.registrationFee || 1500}
+                                ₹{tournament?.registrationFee ?? settings?.registrationFee ?? 1500}
                               </span>
                             </div>
                             {playerForm.guestCount > 0 && (
@@ -965,20 +977,20 @@ export const RegistrationView = ({
                             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between font-bold text-sm text-slate-900">
                               <span>Total Payable Amount:</span>
                               <span className="font-mono text-emerald-700">
-                                ₹{(tournament?.registrationFee || 1500) + (playerForm.guestCount * 500)}
+                                ₹{(tournament?.registrationFee ?? settings?.registrationFee ?? 1500) + (playerForm.guestCount * 500)}
                               </span>
                             </div>
                           </div>
 
-                          {/* UPI ID & Payee */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {/* UPI ID, Payee & Mobile Number */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                             <div className="bg-white p-3 rounded-lg border border-slate-200">
                               <span className="text-[10px] text-slate-400 uppercase font-semibold block">
                                 Payee Name
                               </span>
-                              <span className="font-bold text-slate-900 truncate flex items-center gap-1.5 mt-0.5">
+                              <span className="font-bold text-slate-900 truncate flex items-center gap-1.5 mt-0.5 text-xs">
                                 <img src={WARHAWKS_LOGO_URL} alt="Warhawks" className="w-3.5 h-3.5 object-contain rounded-xs bg-white p-0.2 shrink-0" />
-                                <span>Warhawks Tournament Operations</span>
+                                <span className="truncate">Warhawks Operations</span>
                               </span>
                             </div>
 
@@ -988,11 +1000,11 @@ export const RegistrationView = ({
                               </span>
                               <div className="flex items-center justify-between gap-1 mt-0.5">
                                 <span className="font-mono font-bold text-slate-900 truncate text-[11px]">
-                                  {tournament?.upiId || DEFAULT_WARHAWKS_UPI.upiId}
+                                  {tournament?.upiId || settings?.upiId || DEFAULT_WARHAWKS_UPI.upiId}
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => handleCopyUpiId(tournament?.upiId || DEFAULT_WARHAWKS_UPI.upiId)}
+                                  onClick={() => handleCopyUpiId(tournament?.upiId || settings?.upiId || DEFAULT_WARHAWKS_UPI.upiId)}
                                   className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                                   title="Copy UPI ID"
                                 >
@@ -1004,6 +1016,32 @@ export const RegistrationView = ({
                                 </button>
                               </div>
                             </div>
+
+                            {(tournament?.upiMobileNumber || settings?.upiMobileNumber || DEFAULT_WARHAWKS_UPI.upiMobileNumber) && (
+                              <div className="bg-white p-3 rounded-lg border border-slate-200 sm:col-span-2 lg:col-span-1">
+                                <span className="text-[10px] text-slate-400 uppercase font-semibold block flex items-center gap-1">
+                                  <Smartphone className="w-3 h-3 text-emerald-600" />
+                                  <span>UPI Mobile Number</span>
+                                </span>
+                                <div className="flex items-center justify-between gap-1 mt-0.5">
+                                  <span className="font-mono font-bold text-slate-900 truncate text-[11px]">
+                                    {tournament?.upiMobileNumber || settings?.upiMobileNumber || DEFAULT_WARHAWKS_UPI.upiMobileNumber}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyUpiMobile(tournament?.upiMobileNumber || settings?.upiMobileNumber || DEFAULT_WARHAWKS_UPI.upiMobileNumber)}
+                                    className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                                    title="Copy UPI Mobile Number"
+                                  >
+                                    {copiedUpiMobile ? (
+                                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Transaction Reference / UTR Number Input */}

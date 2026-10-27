@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Database,
@@ -28,6 +28,7 @@ export const SettingsView = ({
   tournament,
   currentUser,
   onUpdateSettings,
+  onUpdateTournament,
   onResetDatabase,
   onShowToast
 }) => {
@@ -39,12 +40,25 @@ export const SettingsView = ({
     supabaseAnonKey: settings.supabaseAnonKey || currentSupabase.anonKey || '',
     upiQrCodeUrl: tournament?.upiQrCodeUrl || settings.upiQrCodeUrl || DEFAULT_WARHAWKS_UPI.defaultQrCodeUrl,
     upiId: tournament?.upiId || settings.upiId || DEFAULT_WARHAWKS_UPI.upiId,
+    upiMobileNumber: tournament?.upiMobileNumber || settings.upiMobileNumber || '',
     registrationFee: tournament?.registrationFee ?? settings.registrationFee ?? 1500
   });
 
   const [organizerCreds, setOrganizerCreds] = useState(() => getStoredOrganizerCredentials());
   const [testingSupabase, setTestingSupabase] = useState(false);
   const [uploadingQr, setUploadingQr] = useState(false);
+
+  useEffect(() => {
+    if (tournament) {
+      setForm(prev => ({
+        ...prev,
+        upiQrCodeUrl: tournament.upiQrCodeUrl || prev.upiQrCodeUrl || DEFAULT_WARHAWKS_UPI.defaultQrCodeUrl,
+        upiId: tournament.upiId || prev.upiId || DEFAULT_WARHAWKS_UPI.upiId,
+        upiMobileNumber: tournament.upiMobileNumber || prev.upiMobileNumber || '',
+        registrationFee: tournament.registrationFee ?? prev.registrationFee ?? 1500
+      }));
+    }
+  }, [tournament?.id, tournament?.upiQrCodeUrl, tournament?.upiId, tournament?.upiMobileNumber, tournament?.registrationFee]);
 
   if (currentUser && !isAdmin) {
     return (
@@ -64,14 +78,24 @@ export const SettingsView = ({
     e.preventDefault();
     const rawFee = String(form.registrationFee ?? '').trim();
     if (rawFee !== '' && (isNaN(Number(rawFee)) || Number(rawFee) < 0)) {
-      alert('Registration fee must be a valid non-negative amount (₹).');
+      onShowToast('Registration fee must be a valid non-negative amount (₹).', 'error');
       return;
     }
+    const cleanFee = rawFee === '' ? 0 : Number(rawFee);
     const cleanSettings = {
       ...form,
-      registrationFee: rawFee === '' ? 0 : Number(rawFee)
+      registrationFee: cleanFee
     };
     onUpdateSettings(cleanSettings);
+
+    if (tournament?.id && onUpdateTournament) {
+      onUpdateTournament(tournament.id, {
+        upiQrCodeUrl: form.upiQrCodeUrl,
+        upiId: form.upiId,
+        upiMobileNumber: form.upiMobileNumber,
+        registrationFee: cleanFee
+      });
+    }
 
     // Save organizer credentials
     updateOrganizerCredentials({
@@ -92,12 +116,19 @@ export const SettingsView = ({
     setUploadingQr(true);
     try {
       const res = await uploadUpiQrToSupabase(file, tournament?.id || 'default');
+      const newQrUrl = res.url;
       setForm(prev => ({
         ...prev,
-        upiQrCodeUrl: res.url
+        upiQrCodeUrl: newQrUrl
       }));
+
+      if (tournament?.id && onUpdateTournament) {
+        onUpdateTournament(tournament.id, { upiQrCodeUrl: newQrUrl });
+      }
+      onUpdateSettings({ ...form, upiQrCodeUrl: newQrUrl });
+
       onShowToast(
-        `UPI QR code uploaded to ${res.storageType === 'supabase_storage' ? 'Supabase Storage' : 'local asset store'}!`,
+        `UPI QR code uploaded to ${res.storageType === 'supabase_storage' ? 'Supabase Storage' : 'local storage'}!`,
         'success'
       );
     } catch (err) {
@@ -359,7 +390,7 @@ export const SettingsView = ({
               </p>
             </div>
 
-            {/* UPI ID and Fee Parameters */}
+            {/* UPI ID, UPI Mobile Number and Fee Parameters */}
             <div className="md:col-span-2 space-y-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
@@ -379,6 +410,23 @@ export const SettingsView = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
+                  <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Organizer UPI Mobile Number</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.upiMobileNumber || ''}
+                    onChange={e => setForm({ ...form, upiMobileNumber: e.target.value })}
+                    placeholder="e.g. +91 98450 12345 or 9845012345"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Displayed to players on registration portal for direct PhonePe / GPay mobile payment.
+                  </p>
+                </div>
+
+                <div>
                   <label className="block font-semibold text-slate-700 mb-1">
                     Default Player Registration Fee (₹)
                   </label>
@@ -390,32 +438,10 @@ export const SettingsView = ({
                     onChange={e => setForm({ ...form, registrationFee: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
                   />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Standard fee per participant before guest accompaniments.
+                  </p>
                 </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Supabase Storage Bucket
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value="tournament-assets / upi-qr-codes"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-100 text-slate-500 font-mono text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Public Storage QR URL
-                </label>
-                <input
-                  type="text"
-                  value={form.upiQrCodeUrl || ''}
-                  onChange={e => setForm({ ...form, upiQrCodeUrl: e.target.value })}
-                  placeholder="https://[project-ref].supabase.co/storage/v1/object/public/tournament-assets/..."
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-[11px]"
-                />
               </div>
             </div>
           </div>

@@ -269,9 +269,10 @@ class TournamentDatabase {
       minSquadSize: data.minSquadSize || 14,
       maxOverseasPlayers: data.maxOverseasPlayers || 4,
       description: data.description || '',
-      upiQrCodeUrl: data.upiQrCodeUrl || '',
-      upiId: data.upiId || 'warhawks.sports@icici',
-      registrationFee: Number(data.registrationFee) || 1500,
+      upiQrCodeUrl: data.upiQrCodeUrl || data.upi_qr_code_url || '',
+      upiId: data.upiId || data.upi_id || 'warhawks.sports@icici',
+      upiMobileNumber: data.upiMobileNumber || data.upi_mobile_number || '',
+      registrationFee: Number(data.registrationFee ?? data.registration_fee) || 1500,
       isArchived: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

@@ -140,6 +140,51 @@ const mapMatchRow = (row) => ({
   created_at: row.created_at || row.createdAt
 });
 
+const mapTournamentRow = (row) => ({
+  ...row,
+  id: row.id,
+  name: row.name,
+  editionNumber: row.edition_number ?? row.editionNumber,
+  edition_number: row.edition_number ?? row.editionNumber,
+  year: row.year,
+  format: row.format,
+  status: row.status,
+  organizer: row.organizer,
+  organizerRole: row.organizer_role ?? row.organizerRole,
+  organizer_role: row.organizer_role ?? row.organizerRole,
+  organizerBranch: row.organizer_branch ?? row.organizerBranch,
+  organizer_branch: row.organizer_branch ?? row.organizerBranch,
+  startDate: row.start_date ?? row.startDate,
+  start_date: row.start_date ?? row.startDate,
+  endDate: row.end_date ?? row.endDate,
+  end_date: row.end_date ?? row.endDate,
+  venue: row.venue,
+  city: row.city,
+  registrationOpen: Boolean(row.registration_open ?? row.registrationOpen),
+  registration_open: Boolean(row.registration_open ?? row.registrationOpen),
+  registrationStartDate: row.registration_start_date ?? row.registrationStartDate,
+  registrationEndDate: row.registration_end_date ?? row.registrationEndDate,
+  totalBudgetPointsPerTeam: Number(row.total_budget_points_per_team ?? row.totalBudgetPointsPerTeam),
+  pointsPerWin: row.points_per_win ?? row.pointsPerWin,
+  pointsPerTie: row.points_per_tie ?? row.pointsPerTie,
+  maxSquadSize: row.max_squad_size ?? row.maxSquadSize,
+  minSquadSize: row.min_squad_size ?? row.minSquadSize,
+  maxOverseasPlayers: row.max_overseas_players ?? row.maxOverseasPlayers,
+  description: row.description || '',
+  upiQrCodeUrl: row.upi_qr_code_url || row.upiQrCodeUrl || '',
+  upi_qr_code_url: row.upi_qr_code_url || row.upiQrCodeUrl || '',
+  upiId: row.upi_id || row.upiId || '',
+  upi_id: row.upi_id || row.upiId || '',
+  upiMobileNumber: row.upi_mobile_number || row.upiMobileNumber || '',
+  upi_mobile_number: row.upi_mobile_number || row.upiMobileNumber || '',
+  registrationFee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
+  registration_fee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
+  isArchived: Boolean(row.is_archived ?? row.isArchived),
+  is_archived: Boolean(row.is_archived ?? row.isArchived),
+  createdAt: row.created_at ?? row.createdAt,
+  updatedAt: row.updated_at ?? row.updatedAt
+});
+
 export async function handler(event) {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -501,7 +546,7 @@ export async function handler(event) {
       if (method === 'GET' && !tournamentId) {
         if (pool) {
           const res = await pool.query('SELECT * FROM public.tournaments ORDER BY edition_number DESC;');
-          return jsonResponse(200, res.rows);
+          return jsonResponse(200, res.rows.map(mapTournamentRow));
         }
         return jsonResponse(200, []);
       }
@@ -532,12 +577,12 @@ export async function handler(event) {
               registration_start_date, registration_end_date, total_budget_points_per_team,
               points_per_win, points_per_tie, max_squad_size, min_squad_size,
               max_overseas_players, description, upi_qr_code_url, upi_id, registration_fee,
-              is_archived
+              upi_mobile_number, is_archived
             ) VALUES (
               $1, $2, $3, $4, $5, $6, $7, $8,
               $9, $10, $11, $12, $13, $14,
               $15, $16, $17, $18, $19, $20, $21,
-              $22, $23, $24, $25, $26, $27
+              $22, $23, $24, $25, $26, $27, $28
             ) RETURNING *;
           `;
           const values = [
@@ -547,12 +592,12 @@ export async function handler(event) {
             t.venue, t.city, Boolean(t.registrationOpen), t.registrationStartDate || null,
             t.registrationEndDate || null, t.totalBudgetPointsPerTeam || 10000000,
             t.pointsPerWin ?? 2, t.pointsPerTie ?? 1, t.maxSquadSize || 18, t.minSquadSize || 14,
-            t.maxOverseasPlayers || 4, t.description || '', t.upiQrCodeUrl || '',
-            t.upiId || 'warhawks.sports@icici', Number(t.registrationFee) || 1500,
-            Boolean(t.isArchived)
+            t.maxOverseasPlayers || 4, t.description || '', t.upiQrCodeUrl || t.upi_qr_code_url || '',
+            t.upiId || t.upi_id || 'warhawks.sports@icici', Number(t.registrationFee ?? t.registration_fee) || 1500,
+            t.upiMobileNumber || t.upi_mobile_number || '', Boolean(t.isArchived)
           ];
           const res = await pool.query(query, values);
-          return jsonResponse(201, res.rows[0]);
+          return jsonResponse(201, mapTournamentRow(res.rows[0]));
         }
         return jsonResponse(201, t);
       }
@@ -564,13 +609,21 @@ export async function handler(event) {
         if (pool) {
           const updates = body;
           const fieldMap = {
-            name: 'name', editionNumber: 'edition_number', year: 'year', format: 'format',
-            status: 'status', startDate: 'start_date', endDate: 'end_date', venue: 'venue',
-            city: 'city', registrationOpen: 'registration_open', registrationStartDate: 'registration_start_date',
-            registrationEndDate: 'registration_end_date', totalBudgetPointsPerTeam: 'total_budget_points_per_team',
-            pointsPerWin: 'points_per_win', pointsPerTie: 'points_per_tie', maxSquadSize: 'max_squad_size',
-            minSquadSize: 'min_squad_size', maxOverseasPlayers: 'max_overseas_players', description: 'description',
-            upiQrCodeUrl: 'upi_qr_code_url', upiId: 'upi_id', registrationFee: 'registration_fee', isArchived: 'is_archived'
+            name: 'name', editionNumber: 'edition_number', edition_number: 'edition_number',
+            year: 'year', format: 'format', status: 'status', startDate: 'start_date', start_date: 'start_date',
+            endDate: 'end_date', end_date: 'end_date', venue: 'venue', city: 'city',
+            registrationOpen: 'registration_open', registration_open: 'registration_open',
+            registrationStartDate: 'registration_start_date', registration_start_date: 'registration_start_date',
+            registrationEndDate: 'registration_end_date', registration_end_date: 'registration_end_date',
+            totalBudgetPointsPerTeam: 'total_budget_points_per_team', total_budget_points_per_team: 'total_budget_points_per_team',
+            pointsPerWin: 'points_per_win', points_per_win: 'points_per_win', pointsPerTie: 'points_per_tie', points_per_tie: 'points_per_tie',
+            maxSquadSize: 'max_squad_size', max_squad_size: 'max_squad_size', minSquadSize: 'min_squad_size', min_squad_size: 'min_squad_size',
+            maxOverseasPlayers: 'max_overseas_players', max_overseas_players: 'max_overseas_players', description: 'description',
+            upiQrCodeUrl: 'upi_qr_code_url', upi_qr_code_url: 'upi_qr_code_url',
+            upiId: 'upi_id', upi_id: 'upi_id',
+            upiMobileNumber: 'upi_mobile_number', upi_mobile_number: 'upi_mobile_number',
+            registrationFee: 'registration_fee', registration_fee: 'registration_fee',
+            isArchived: 'is_archived', is_archived: 'is_archived'
           };
           const setClauses = ['updated_at = timezone(\'utc\', now())'];
           const values = [tournamentId];
@@ -586,7 +639,7 @@ export async function handler(event) {
             values
           );
           if (res.rows.length === 0) return jsonResponse(404, { error: 'Tournament not found.' });
-          return jsonResponse(200, res.rows[0]);
+          return jsonResponse(200, mapTournamentRow(res.rows[0]));
         }
         return jsonResponse(200, { id: tournamentId, ...body });
       }

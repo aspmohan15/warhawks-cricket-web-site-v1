@@ -869,6 +869,7 @@ export default function App() {
               {currentSection === 'registrations' && (
                 <RegistrationView
                   tournament={activeTournament}
+                  settings={settings}
                   registrations={registrations}
                   sponsors={sponsors}
                   currentUser={currentUser}
@@ -918,7 +919,17 @@ export default function App() {
                   onUpdateSettings={updates => {
                     db.updateSettings(updates);
                     setSettings(db.getSettings());
+                    if (activeTournament?.id) {
+                      db.updateTournament(activeTournament.id, {
+                        upiQrCodeUrl: updates.upiQrCodeUrl,
+                        upiId: updates.upiId,
+                        upiMobileNumber: updates.upiMobileNumber,
+                        registrationFee: updates.registrationFee
+                      });
+                      refreshTournamentData(activeTournament.id);
+                    }
                   }}
+                  onUpdateTournament={handleUpdateTournament}
                   onResetDatabase={handleResetDatabase}
                   onShowToast={showToast}
                 />

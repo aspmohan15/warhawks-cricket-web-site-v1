@@ -9,6 +9,7 @@ export const DEFAULT_WARHAWKS_UPI = {
   upiId: 'warhawks.sports@icici',
   payeeName: 'Warhawks Tournament Operations',
   defaultFee: 1500,
+  upiMobileNumber: '+91 98450 12345',
   defaultQrCodeUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&auto=format&fit=crop&q=80'
 };
 

@@ -607,6 +607,51 @@ app.get('/api/auth/verify', (req: Request, res: Response) => {
 // ==============================================================================
 // 2. TOURNAMENTS API (Privileged operations protected by requireOrganizer)
 // ==============================================================================
+const mapTournamentRow = (row: any) => ({
+  ...row,
+  id: row.id,
+  name: row.name,
+  editionNumber: row.edition_number ?? row.editionNumber,
+  edition_number: row.edition_number ?? row.editionNumber,
+  year: row.year,
+  format: row.format,
+  status: row.status,
+  organizer: row.organizer,
+  organizerRole: row.organizer_role ?? row.organizerRole,
+  organizer_role: row.organizer_role ?? row.organizerRole,
+  organizerBranch: row.organizer_branch ?? row.organizerBranch,
+  organizer_branch: row.organizer_branch ?? row.organizerBranch,
+  startDate: row.start_date ?? row.startDate,
+  start_date: row.start_date ?? row.startDate,
+  endDate: row.end_date ?? row.endDate,
+  end_date: row.end_date ?? row.endDate,
+  venue: row.venue,
+  city: row.city,
+  registrationOpen: Boolean(row.registration_open ?? row.registrationOpen),
+  registration_open: Boolean(row.registration_open ?? row.registrationOpen),
+  registrationStartDate: row.registration_start_date ?? row.registrationStartDate,
+  registrationEndDate: row.registration_end_date ?? row.registrationEndDate,
+  totalBudgetPointsPerTeam: Number(row.total_budget_points_per_team ?? row.totalBudgetPointsPerTeam),
+  pointsPerWin: row.points_per_win ?? row.pointsPerWin,
+  pointsPerTie: row.points_per_tie ?? row.pointsPerTie,
+  maxSquadSize: row.max_squad_size ?? row.maxSquadSize,
+  minSquadSize: row.min_squad_size ?? row.minSquadSize,
+  maxOverseasPlayers: row.max_overseas_players ?? row.maxOverseasPlayers,
+  description: row.description || '',
+  upiQrCodeUrl: row.upi_qr_code_url || row.upiQrCodeUrl || '',
+  upi_qr_code_url: row.upi_qr_code_url || row.upiQrCodeUrl || '',
+  upiId: row.upi_id || row.upiId || '',
+  upi_id: row.upi_id || row.upiId || '',
+  upiMobileNumber: row.upi_mobile_number || row.upiMobileNumber || '',
+  upi_mobile_number: row.upi_mobile_number || row.upiMobileNumber || '',
+  registrationFee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
+  registration_fee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
+  isArchived: Boolean(row.is_archived ?? row.isArchived),
+  is_archived: Boolean(row.is_archived ?? row.isArchived),
+  createdAt: row.created_at ?? row.createdAt,
+  updatedAt: row.updated_at ?? row.updatedAt
+});
+
 app.get('/api/tournaments', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
@@ -619,7 +664,7 @@ app.get('/api/tournaments', async (req: Request, res: Response) => {
       : 'SELECT * FROM public.tournaments WHERE is_archived = false ORDER BY edition_number DESC;';
 
     const result = await pool.query(query);
-    return res.json(result.rows);
+    return res.json(result.rows.map(mapTournamentRow));
   } catch (err: any) {
     console.error('API /api/tournaments GET error:', err.message);
     return res.status(500).json({ error: err.message });
@@ -636,14 +681,14 @@ app.post('/api/tournaments', requireOrganizer, async (req: Request, res: Respons
         registration_start_date, registration_end_date, total_budget_points_per_team,
         points_per_win, points_per_tie, max_squad_size, min_squad_size,
         max_overseas_players, description, upi_qr_code_url, upi_id, registration_fee,
-        is_archived
+        upi_mobile_number, is_archived
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8,
         $9, $10, $11, $12, $13, $14,
         $15, $16, $17,
         $18, $19, $20, $21,
         $22, $23, $24, $25, $26,
-        $27
+        $27, $28
       )
       RETURNING *;
     `;
@@ -671,9 +716,10 @@ app.post('/api/tournaments', requireOrganizer, async (req: Request, res: Respons
       t.minSquadSize || 14,
       t.maxOverseasPlayers || 4,
       t.description || '',
-      t.upiQrCodeUrl || '',
-      t.upiId || 'warhawks.sports@icici',
-      Number(t.registrationFee) || 1500,
+      t.upiQrCodeUrl || t.upi_qr_code_url || '',
+      t.upiId || t.upi_id || 'warhawks.sports@icici',
+      Number(t.registrationFee ?? t.registration_fee) || 1500,
+      t.upiMobileNumber || t.upi_mobile_number || '',
       Boolean(t.isArchived)
     ];
 
@@ -691,7 +737,7 @@ app.post('/api/tournaments', requireOrganizer, async (req: Request, res: Respons
       ).catch(() => null);
     }
 
-    return res.status(201).json(result.rows[0]);
+    return res.status(201).json(mapTournamentRow(result.rows[0]));
   } catch (err: any) {
     console.error('API /api/tournaments POST error:', err.message);
     return res.status(500).json({ error: err.message });
@@ -703,31 +749,49 @@ app.patch('/api/tournaments/:id', requireOrganizer, async (req: Request, res: Re
     const { id } = req.params;
     const updates = req.body;
     
-    // Map camelCase to snake_case column updates
+    // Map camelCase and snake_case column updates
     const fieldMap: Record<string, string> = {
       name: 'name',
       editionNumber: 'edition_number',
+      edition_number: 'edition_number',
       year: 'year',
       format: 'format',
       status: 'status',
       startDate: 'start_date',
+      start_date: 'start_date',
       endDate: 'end_date',
+      end_date: 'end_date',
       venue: 'venue',
       city: 'city',
       registrationOpen: 'registration_open',
+      registration_open: 'registration_open',
       registrationStartDate: 'registration_start_date',
+      registration_start_date: 'registration_start_date',
       registrationEndDate: 'registration_end_date',
+      registration_end_date: 'registration_end_date',
       totalBudgetPointsPerTeam: 'total_budget_points_per_team',
+      total_budget_points_per_team: 'total_budget_points_per_team',
       pointsPerWin: 'points_per_win',
+      points_per_win: 'points_per_win',
       pointsPerTie: 'points_per_tie',
+      points_per_tie: 'points_per_tie',
       maxSquadSize: 'max_squad_size',
+      max_squad_size: 'max_squad_size',
       minSquadSize: 'min_squad_size',
+      min_squad_size: 'min_squad_size',
       maxOverseasPlayers: 'max_overseas_players',
+      max_overseas_players: 'max_overseas_players',
       description: 'description',
       upiQrCodeUrl: 'upi_qr_code_url',
+      upi_qr_code_url: 'upi_qr_code_url',
       upiId: 'upi_id',
+      upi_id: 'upi_id',
+      upiMobileNumber: 'upi_mobile_number',
+      upi_mobile_number: 'upi_mobile_number',
       registrationFee: 'registration_fee',
-      isArchived: 'is_archived'
+      registration_fee: 'registration_fee',
+      isArchived: 'is_archived',
+      is_archived: 'is_archived'
     };
 
     const setClauses: string[] = [];
@@ -754,7 +818,7 @@ app.patch('/api/tournaments/:id', requireOrganizer, async (req: Request, res: Re
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Tournament not found.' });
     }
-    return res.json(result.rows[0]);
+    return res.json(mapTournamentRow(result.rows[0]));
   } catch (err: any) {
     console.error('API /api/tournaments PATCH error:', err.message);
     return res.status(500).json({ error: err.message });
@@ -1817,6 +1881,7 @@ async function startServer() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
       );
       ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS advance_amount NUMERIC NOT NULL DEFAULT 0;
+      ALTER TABLE public.tournaments ADD COLUMN IF NOT EXISTS upi_mobile_number TEXT;
       CREATE INDEX IF NOT EXISTS idx_expenses_tour_date ON public.expenses(tournament_id, date DESC);
 
       CREATE TABLE IF NOT EXISTS public.rules (

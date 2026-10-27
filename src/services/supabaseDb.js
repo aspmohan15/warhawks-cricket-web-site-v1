@@ -13,28 +13,29 @@ const mapTournamentFromDb = (row) => ({
   format: row.format,
   status: row.status,
   organizer: row.organizer || 'Warhawks',
-  organizerRole: row.organizer_role,
-  organizerBranch: row.organizer_branch,
-  startDate: row.start_date,
-  endDate: row.end_date,
+  organizerRole: row.organizer_role ?? row.organizerRole,
+  organizerBranch: row.organizer_branch ?? row.organizerBranch,
+  startDate: row.start_date ?? row.startDate,
+  endDate: row.end_date ?? row.endDate,
   venue: row.venue,
   city: row.city,
-  registrationOpen: Boolean(row.registration_open),
-  registrationStartDate: row.registration_start_date,
-  registrationEndDate: row.registration_end_date,
-  totalBudgetPointsPerTeam: Number(row.total_budget_points_per_team),
-  pointsPerWin: row.points_per_win,
-  pointsPerTie: row.points_per_tie,
-  maxSquadSize: row.max_squad_size,
-  minSquadSize: row.min_squad_size,
-  maxOverseasPlayers: row.max_overseas_players,
-  description: row.description,
-  upiQrCodeUrl: row.upi_qr_code_url || '',
-  upiId: row.upi_id || '',
-  registrationFee: row.registration_fee ? Number(row.registration_fee) : 1500,
-  isArchived: Boolean(row.is_archived),
-  createdAt: row.created_at,
-  updatedAt: row.updated_at
+  registrationOpen: Boolean(row.registration_open ?? row.registrationOpen),
+  registrationStartDate: row.registration_start_date ?? row.registrationStartDate,
+  registrationEndDate: row.registration_end_date ?? row.registrationEndDate,
+  totalBudgetPointsPerTeam: Number(row.total_budget_points_per_team ?? row.totalBudgetPointsPerTeam),
+  pointsPerWin: row.points_per_win ?? row.pointsPerWin,
+  pointsPerTie: row.points_per_tie ?? row.pointsPerTie,
+  maxSquadSize: row.max_squad_size ?? row.maxSquadSize,
+  minSquadSize: row.min_squad_size ?? row.minSquadSize,
+  maxOverseasPlayers: row.max_overseas_players ?? row.maxOverseasPlayers,
+  description: row.description || '',
+  upiQrCodeUrl: row.upi_qr_code_url || row.upiQrCodeUrl || '',
+  upiId: row.upi_id || row.upiId || '',
+  upiMobileNumber: row.upi_mobile_number || row.upiMobileNumber || '',
+  registrationFee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
+  isArchived: Boolean(row.is_archived ?? row.isArchived),
+  createdAt: row.created_at ?? row.createdAt,
+  updatedAt: row.updated_at ?? row.updatedAt
 });
 
 /**
@@ -386,9 +387,10 @@ export const supabaseDb = {
       min_squad_size: t.minSquadSize || 14,
       max_overseas_players: t.maxOverseasPlayers || 4,
       description: t.description || '',
-      upi_qr_code_url: t.upiQrCodeUrl || '',
-      upi_id: t.upiId || 'warhawks.sports@icici',
-      registration_fee: Number(t.registrationFee) || 1500,
+      upi_qr_code_url: t.upiQrCodeUrl || t.upi_qr_code_url || '',
+      upi_id: t.upiId || t.upi_id || 'warhawks.sports@icici',
+      upi_mobile_number: t.upiMobileNumber || t.upi_mobile_number || '',
+      registration_fee: Number(t.registrationFee ?? t.registration_fee) || 1500,
       is_archived: Boolean(t.isArchived)
     };
 
@@ -441,8 +443,13 @@ export const supabaseDb = {
     if (updates.totalBudgetPointsPerTeam !== undefined) row.total_budget_points_per_team = updates.totalBudgetPointsPerTeam;
     if (updates.description !== undefined) row.description = updates.description;
     if (updates.upiQrCodeUrl !== undefined) row.upi_qr_code_url = updates.upiQrCodeUrl;
+    if (updates.upi_qr_code_url !== undefined) row.upi_qr_code_url = updates.upi_qr_code_url;
     if (updates.upiId !== undefined) row.upi_id = updates.upiId;
+    if (updates.upi_id !== undefined) row.upi_id = updates.upi_id;
+    if (updates.upiMobileNumber !== undefined) row.upi_mobile_number = updates.upiMobileNumber;
+    if (updates.upi_mobile_number !== undefined) row.upi_mobile_number = updates.upi_mobile_number;
     if (updates.registrationFee !== undefined) row.registration_fee = updates.registrationFee;
+    if (updates.registration_fee !== undefined) row.registration_fee = updates.registration_fee;
     if (updates.isArchived !== undefined) row.is_archived = updates.isArchived;
 
     const { data, error } = await client.from('tournaments').update(row).eq('id', id).select().single();
