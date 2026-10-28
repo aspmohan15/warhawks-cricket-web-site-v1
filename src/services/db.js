@@ -415,7 +415,17 @@ class TournamentDatabase {
   // ==========================================
   getPlayers(tournamentId) {
     if (!tournamentId) return [];
-    return (this.schema.players || []).filter(p => p.tournamentId === tournamentId);
+    const rejectedEmails = new Set(
+      (this.schema.registrations || [])
+        .filter(r => r.tournamentId === tournamentId && r.approvalStatus === 'rejected' && r.email)
+        .map(r => r.email.toLowerCase())
+    );
+    return (this.schema.players || []).filter(p => {
+      if (p.tournamentId !== tournamentId) return false;
+      if (p.registrationStatus === 'rejected') return false;
+      if (p.email && rejectedEmails.has(p.email.toLowerCase())) return false;
+      return true;
+    });
   }
 
   createPlayer(data) {

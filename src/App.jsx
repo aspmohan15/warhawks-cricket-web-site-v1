@@ -21,6 +21,7 @@ import { MediaLibraryView } from './components/views/MediaLibraryView';
 import { ImportHistoryView } from './components/views/ImportHistoryView';
 import { UserAccessView } from './components/views/UserAccessView';
 import { SettingsView } from './components/views/SettingsView';
+import { PlayerDashboardView } from './components/views/PlayerDashboardView';
 import { OrganizerLoginModal } from './components/common/OrganizerLoginModal';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal';
 import { DatabaseStatusModal } from './components/common/DatabaseStatusModal';
@@ -29,6 +30,7 @@ import { isSupabaseConfigured } from './services/supabase';
 import { WARHAWKS_LOGO_URL } from './constants';
 
 const PUBLIC_ALLOWED_SECTIONS = [
+  'dashboard',
   'sponsorships',
   'fixtures_results',
   'standings',
@@ -42,10 +44,8 @@ const PUBLIC_ALLOWED_SECTIONS = [
 export default function App() {
   const organizerSession = getOrganizerSession();
 
-  // If organizer session exists, default to dashboard; otherwise open public player portal (registrations)
-  const [currentSection, setCurrentSection] = useState(
-    organizerSession ? 'dashboard' : 'registrations'
-  );
+  // Default page is always dashboard for both players and organizers on landing or refresh
+  const [currentSection, setCurrentSection] = useState('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [organizerLoginModalOpen, setOrganizerLoginModalOpen] = useState(false);
@@ -60,18 +60,21 @@ export default function App() {
     return list.length > 0 ? list[0].id : null;
   });
 
-  // Current user: authenticated organizer if session exists; otherwise public visitor without an account
+  // Current user: authenticated organizer if session exists; otherwise player
   const [currentUser, setCurrentUser] = useState(() => {
     if (organizerSession && organizerSession.user) {
       return organizerSession.user;
     }
+    const storedEmail = typeof window !== 'undefined' ? localStorage.getItem('warhawks_player_email') : '';
     return {
-      id: 'public-visitor',
-      name: 'Public Visitor',
+      id: 'player-user',
+      name: 'Player',
       role: 'player',
-      email: ''
+      email: storedEmail || ''
     };
   });
+
+  const isOrganizer = currentUser?.role === 'organizer';
 
   // Derived active tournament
   const activeTournament = tournaments.find(t => t.id === activeTournamentId) || tournaments[0] || null;
@@ -222,15 +225,18 @@ export default function App() {
 
   // Role Simulator
   const handleSwitchRole = (role) => {
+    const storedEmail = typeof window !== 'undefined' ? localStorage.getItem('warhawks_player_email') : '';
     const u = db.getUsers().find(user => user.role === role) || {
       ...currentUser,
-      role
+      name: role === 'player' ? 'Player' : 'Organizer',
+      role,
+      email: role === 'player' ? (storedEmail || currentUser.email) : currentUser.email
     };
     setCurrentUser(u);
     if (role === 'player' && !PUBLIC_ALLOWED_SECTIONS.includes(currentSection)) {
-      setCurrentSection('sponsorships');
+      setCurrentSection('dashboard');
     }
-    showToast(`Session authority updated: ${role.toUpperCase()}`, 'info');
+    showToast(`Session authority updated: ${role === 'player' ? 'Player' : 'Organizer'}`, 'info');
   };
 
   // Organizer Authentication Handlers
@@ -243,14 +249,15 @@ export default function App() {
 
   const handleOrganizerLogout = () => {
     logoutOrganizer();
+    const storedEmail = typeof window !== 'undefined' ? localStorage.getItem('warhawks_player_email') : '';
     setCurrentUser({
-      id: 'public-visitor',
-      name: 'Public Visitor',
+      id: 'player-user',
+      name: 'Player',
       role: 'player',
-      email: ''
+      email: storedEmail || ''
     });
-    setCurrentSection('registrations');
-    showToast('Logged out of organizer session. Public visitor portal active.', 'info');
+    setCurrentSection('dashboard');
+    showToast('Logged out of organizer session. Player Dashboard active.', 'info');
   };
 
   // Quick Action Handler from Topbar
@@ -734,23 +741,37 @@ export default function App() {
           ) : (
             <>
               {currentSection === 'dashboard' && (
-                <DashboardView
-                  tournament={activeTournament}
-                  teams={teams}
-                  players={players}
-                  matches={matches}
-                  sponsors={sponsors}
-                  expenses={expenses}
-                  auditLogs={auditLogs}
-                  registrations={registrations}
-                  announcements={announcements}
-                  onCreateAnnouncement={handleCreateAnnouncement}
-                  onUpdateAnnouncement={handleUpdateAnnouncement}
-                  onDeleteAnnouncement={handleDeleteAnnouncement}
-                  onSwapAnnouncements={handleSwapAnnouncements}
-                  onNavigate={setCurrentSection}
-                  onQuickAction={handleQuickAction}
-                />
+                isOrganizer ? (
+                  <DashboardView
+                    tournament={activeTournament}
+                    teams={teams}
+                    players={players}
+                    matches={matches}
+                    sponsors={sponsors}
+                    expenses={expenses}
+                    auditLogs={auditLogs}
+                    registrations={registrations}
+                    announcements={announcements}
+                    onCreateAnnouncement={handleCreateAnnouncement}
+                    onUpdateAnnouncement={handleUpdateAnnouncement}
+                    onDeleteAnnouncement={handleDeleteAnnouncement}
+                    onSwapAnnouncements={handleSwapAnnouncements}
+                    onNavigate={setCurrentSection}
+                    onQuickAction={handleQuickAction}
+                  />
+                ) : (
+                  <PlayerDashboardView
+                    tournament={activeTournament}
+                    teams={teams}
+                    players={players}
+                    matches={matches}
+                    standings={standings}
+                    registrations={registrations}
+                    announcements={announcements}
+                    currentUser={currentUser}
+                    onNavigate={setCurrentSection}
+                  />
+                )
               )}
 
               {currentSection === 'editions' && (

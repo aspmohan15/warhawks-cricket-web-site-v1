@@ -68,8 +68,10 @@ export const TopBar = ({
     };
   }, []);
 
+  const isOrganizer = currentUser?.role === 'organizer';
+
   const sectionTitles = {
-    dashboard: 'Dashboard',
+    dashboard: isOrganizer ? 'Organizer Dashboard' : 'Player Dashboard',
     editions: 'Editions',
     teams_players: 'Teams & Squads',
     fixtures_results: 'Fixtures & Scores',
@@ -79,7 +81,7 @@ export const TopBar = ({
     expenses: 'Expense Ledger',
     food_preferences: 'Food & Dietary',
     rules_videos: 'Rules & Videos',
-    registrations: 'Registrations',
+    registrations: isOrganizer ? 'Registration Queue' : 'Player Registration',
     media_library: 'Media Library',
     import_history: 'Imports & CricHeroes',
     user_access: 'User Access RBAC',
@@ -87,7 +89,7 @@ export const TopBar = ({
   };
 
   const sectionFullTitles = {
-    dashboard: 'Tournament Overview',
+    dashboard: isOrganizer ? 'Organizer Command Center' : 'Athlete Portal & Dashboard',
     editions: 'Tournament Editions',
     teams_players: 'Teams & Player Squads',
     fixtures_results: 'Fixtures & Live Results',
@@ -97,7 +99,7 @@ export const TopBar = ({
     expenses: 'Financial Ledger & Expenses',
     food_preferences: 'Player Food & Dietary Management',
     rules_videos: 'Rules, Policies & Demo Videos',
-    registrations: 'Player Registration Queue',
+    registrations: isOrganizer ? 'Player Registration Queue' : 'Player Registration & Fee Payment',
     media_library: 'Tournament Media Library',
     import_history: 'Spreadsheet & CricHeroes Imports',
     user_access: 'Role-Based Access Control',
@@ -106,7 +108,7 @@ export const TopBar = ({
 
   const roles = [
     { id: 'organizer', label: 'Organizer', desc: 'Warhawks full operational control across all modules' },
-    { id: 'player', label: 'Public Visitor', desc: 'Browse tournament fixtures, points table, public sponsors & registration' }
+    { id: 'player', label: 'Player', desc: 'Player portal: registration status, squad roster, fixtures & live standings' }
   ];
 
   return (

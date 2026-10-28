@@ -590,6 +590,7 @@ export const supabaseDb = {
       .from('players')
       .select('*')
       .eq('tournament_id', tournamentId)
+      .neq('registration_status', 'rejected')
       .order('name');
 
     if (error) throw error;

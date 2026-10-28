@@ -184,8 +184,9 @@ export const RegistrationView = ({
   };
 
   // Find player's existing registration for this tournament
+  const rememberedEmail = currentUser?.email || (typeof window !== 'undefined' ? localStorage.getItem('warhawks_player_email') : '') || '';
   const myRegistration = registrations.find(
-    r => r.tournamentId === tournament?.id && r.email?.toLowerCase() === (currentUser?.email || playerForm.email)?.toLowerCase()
+    r => r.tournamentId === tournament?.id && r.email?.toLowerCase() === (rememberedEmail || playerForm.email)?.toLowerCase()
   );
 
   const filteredRegistrations = registrations.filter(r => {
@@ -263,6 +264,12 @@ export const RegistrationView = ({
 
     if (!tournament?.id) {
       return;
+    }
+
+    if (playerForm.email) {
+      try {
+        localStorage.setItem('warhawks_player_email', playerForm.email.trim());
+      } catch {}
     }
 
     onPlayerRegister({

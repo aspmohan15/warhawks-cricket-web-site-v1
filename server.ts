@@ -944,8 +944,8 @@ app.get('/api/players', async (req: Request, res: Response) => {
   try {
     const { tournamentId } = req.query;
     const query = tournamentId
-      ? 'SELECT * FROM public.players WHERE tournament_id = $1 ORDER BY name ASC;'
-      : 'SELECT * FROM public.players ORDER BY name ASC;';
+      ? "SELECT * FROM public.players WHERE tournament_id = $1 AND (registration_status IS NULL OR registration_status != 'rejected') ORDER BY name ASC;"
+      : "SELECT * FROM public.players WHERE (registration_status IS NULL OR registration_status != 'rejected') ORDER BY name ASC;";
     const params = tournamentId ? [tournamentId] : [];
     const result = await pool.query(query, params);
     return res.json(result.rows);
