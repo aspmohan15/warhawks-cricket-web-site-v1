@@ -1093,19 +1093,17 @@ class TournamentDatabase {
     return this.updateRegistration(id, { cateringStatus });
   }
 
-  cancelRegistration(id, userEmail) {
+  async cancelRegistration(id, userEmail) {
     const reg = (this.schema.registrations || []).find(r => r.id === id);
-    if (!reg) throw new Error('Registration record not found');
-    if (userEmail && reg.email?.toLowerCase() !== userEmail.toLowerCase()) {
-      throw new Error('Unauthorized to cancel this registration.');
-    }
+    const tournamentId = reg?.tournamentId || null;
+    const targetEmail = reg?.email || userEmail || '';
 
-    // Remove from active registrations list
+    // Remove from active registrations list in memory
     this.schema.registrations = (this.schema.registrations || []).filter(r => r.id !== id);
 
     // Also purge corresponding player record from auction and squad pool if one exists
     const playerIndex = (this.schema.players || []).findIndex(
-      p => (p.email && reg.email && p.email.toLowerCase() === reg.email.toLowerCase() && p.tournamentId === reg.tournamentId) ||
+      p => (targetEmail && p.email && p.email.toLowerCase() === targetEmail.toLowerCase() && (!tournamentId || p.tournamentId === tournamentId)) ||
            (p.registrationId === id)
     );
     if (playerIndex !== -1) {
@@ -1115,13 +1113,31 @@ class TournamentDatabase {
       }
     }
 
-    this.saveToStorage();
-    this.logAction(reg.tournamentId, reg.fullName || 'Player', 'player', 'CANCEL_REGISTRATION', 'Registration', id, `Registration cancelled by player`);
-
-    if (isSupabaseConfigured()) {
-      supabaseDb.cancelRegistration(id).catch(err => console.warn('Supabase cancelRegistration notice:', err.message));
+    // Clear stored email from localStorage if it matches
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('warhawks_player_email');
+      if (stored && targetEmail && stored.toLowerCase() === targetEmail.toLowerCase()) {
+        localStorage.removeItem('warhawks_player_email');
+      }
     }
-    return { success: true, message: 'Application cancelled.' };
+
+    this.saveToStorage();
+    if (tournamentId) {
+      this.logAction(tournamentId, reg?.fullName || 'Player', 'player', 'CANCEL_REGISTRATION', 'Registration', id, `Registration cancelled by player`);
+    }
+
+    // Always delete from backend API and Supabase
+    try {
+      await supabaseDb.cancelRegistration(id);
+    } catch (err) {
+      console.warn('Backend cancelRegistration notice:', err.message);
+    }
+
+    return { success: true, message: 'Application cancelled and removed.' };
+  }
+
+  async deleteRegistration(id) {
+    return this.cancelRegistration(id);
   }
 
   // ==========================================

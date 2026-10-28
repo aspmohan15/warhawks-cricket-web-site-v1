@@ -1283,8 +1283,8 @@ app.get('/api/registrations', async (req: Request, res: Response) => {
     const { tournamentId } = req.query;
     // Always exclude cancelled registrations from organizer and public views
     const query = tournamentId
-      ? "SELECT * FROM public.registrations WHERE tournament_id = $1 AND (approval_status != 'cancelled' OR approval_status IS NULL) ORDER BY created_at DESC;"
-      : "SELECT * FROM public.registrations WHERE (approval_status != 'cancelled' OR approval_status IS NULL) ORDER BY created_at DESC;";
+      ? "SELECT * FROM public.registrations WHERE tournament_id = $1 AND (approval_status != 'cancelled' OR approval_status IS NULL) ORDER BY application_date DESC;"
+      : "SELECT * FROM public.registrations WHERE (approval_status != 'cancelled' OR approval_status IS NULL) ORDER BY application_date DESC;";
     const params = tournamentId ? [tournamentId] : [];
     const result = await pool.query(query, params);
     return res.json(result.rows);

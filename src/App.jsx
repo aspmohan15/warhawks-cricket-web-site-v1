@@ -295,11 +295,12 @@ export default function App() {
     }
   };
 
-  const handleCancelRegistration = (regId) => {
+  const handleCancelRegistration = async (regId) => {
     try {
-      db.cancelRegistration(regId, currentUser?.email);
+      await db.cancelRegistration(regId, currentUser?.email);
+      setRegistrations(prev => prev.filter(r => r.id !== regId));
       refreshTournamentData(activeTournamentId);
-      showToast('Registration application cancelled.', 'info');
+      showToast('Registration application cancelled and removed.', 'info');
     } catch (err) {
       showToast(err.message || 'Cancellation failed', 'error');
     }
@@ -901,6 +902,7 @@ export default function App() {
                   onUpdateStatus={handleUpdateRegistrationStatus}
                   onPlayerRegister={handlePlayerRegister}
                   onCancelRegistration={handleCancelRegistration}
+                  onDeleteRegistration={handleCancelRegistration}
                   onNavigateToSponsors={() => setCurrentSection('sponsorships')}
                 />
               )}

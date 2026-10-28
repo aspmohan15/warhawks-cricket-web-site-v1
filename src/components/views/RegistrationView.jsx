@@ -46,6 +46,7 @@ export const RegistrationView = ({
   onUpdateStatus,
   onPlayerRegister,
   onCancelRegistration,
+  onDeleteRegistration,
   onNavigateToEditions,
   onNavigateToSponsors
 }) => {
@@ -587,6 +588,9 @@ export const RegistrationView = ({
                   <button
                     onClick={() => {
                       if (confirm('Are you sure you want to cancel your tournament registration application?')) {
+                        if (typeof window !== 'undefined') {
+                          localStorage.removeItem('warhawks_player_email');
+                        }
                         onCancelRegistration(myRegistration.id);
                       }
                     }}
@@ -1419,35 +1423,50 @@ export const RegistrationView = ({
               />
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
               <button
                 type="button"
-                onClick={() => setReviewModalApp(null)}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                onClick={() => {
+                  if (confirm(`Permanently delete and remove ${reviewModalApp.fullName}'s registration from the queue? This cannot be undone.`)) {
+                    onDeleteRegistration?.(reviewModalApp.id);
+                    setReviewModalApp(null);
+                  }
+                }}
+                className="min-h-[38px] px-3.5 py-1.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
               >
-                Cancel
+                Delete Application
               </button>
-              <button
-                type="button"
-                onClick={() => handleReviewAction('rejected')}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold cursor-pointer"
-              >
-                Reject
-              </button>
-              <button
-                type="button"
-                onClick={() => handleReviewAction('waitlisted')}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold cursor-pointer"
-              >
-                Waitlist
-              </button>
-              <button
-                type="button"
-                onClick={() => handleReviewAction('approved')}
-                className="min-h-[38px] px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs cursor-pointer"
-              >
-                Approve & Add to Roster
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReviewModalApp(null)}
+                  className="min-h-[38px] px-3.5 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReviewAction('rejected')}
+                  className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold cursor-pointer"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReviewAction('waitlisted')}
+                  className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold cursor-pointer"
+                >
+                  Waitlist
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReviewAction('approved')}
+                  className="min-h-[38px] px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs cursor-pointer"
+                >
+                  Approve & Add to Roster
+                </button>
+              </div>
             </div>
           </div>
         </Modal>
