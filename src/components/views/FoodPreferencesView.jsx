@@ -142,7 +142,9 @@ export const FoodPreferencesView = ({
     };
   };
 
-  const parsedRegistrations = registrations.map(getRegistrationMealData);
+  // Exclude rejected player registrations from food & dietary management
+  const validRegistrations = (registrations || []).filter(r => r.approvalStatus !== 'rejected');
+  const parsedRegistrations = validRegistrations.map(getRegistrationMealData);
 
   // High-Level Aggregate Metrics for Warhawks Catering Command
   const aggregateMetrics = parsedRegistrations.reduce(
@@ -457,7 +459,7 @@ export const FoodPreferencesView = ({
       <div className="md:hidden space-y-3">
         {filteredList.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-xs text-slate-400">
-            {registrations.length === 0 ? 'No player meal requisitions or registrations yet.' : 'No player registration records match the current filter criteria.'}
+            {validRegistrations.length === 0 ? 'No player meal requisitions or registrations yet.' : 'No player registration records match the current filter criteria.'}
           </div>
         ) : (
           filteredList.map(item => (
@@ -585,7 +587,7 @@ export const FoodPreferencesView = ({
               {filteredList.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-slate-400">
-                    {registrations.length === 0 ? 'No player meal requisitions or registrations yet.' : 'No player registration records match the current filter criteria.'}
+                    {validRegistrations.length === 0 ? 'No player meal requisitions or registrations yet.' : 'No player registration records match the current filter criteria.'}
                   </td>
                 </tr>
               ) : (

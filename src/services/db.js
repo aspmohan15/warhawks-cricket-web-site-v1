@@ -1055,6 +1055,18 @@ class TournamentDatabase {
           paymentStatus: reg.paymentStatus
         });
       }
+    } else if (approvalStatus === 'rejected') {
+      // Remove corresponding player record from auction and squad pool
+      const playerIndex = (this.schema.players || []).findIndex(
+        p => (p.email && reg.email && p.email.toLowerCase() === reg.email.toLowerCase() && p.tournamentId === reg.tournamentId) ||
+             (p.registrationId === id)
+      );
+      if (playerIndex !== -1) {
+        const deletedPlayer = this.schema.players.splice(playerIndex, 1)[0];
+        if (isSupabaseConfigured() && deletedPlayer?.id) {
+          supabaseDb.deletePlayer(deletedPlayer.id).catch(err => console.warn('Supabase deletePlayer on reject notice:', err.message));
+        }
+      }
     }
     this.saveToStorage();
     this.logAction(reg.tournamentId, 'Warhawks Operations', 'organizer', 'REGISTRATION_STATUS_UPDATE', 'Registration', id, `Updated ${reg.fullName} status to ${approvalStatus}`);

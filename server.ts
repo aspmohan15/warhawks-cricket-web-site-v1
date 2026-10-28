@@ -1345,8 +1345,12 @@ app.patch('/api/registrations/:id', requireOrganizer, async (req: Request, res: 
     const values: any[] = [];
     let idx = 1;
 
-    if (updates.status !== undefined) {
-      setClauses.push(`status = $${idx}`);
+    if (updates.approvalStatus !== undefined) {
+      setClauses.push(`approval_status = $${idx}`);
+      values.push(updates.approvalStatus);
+      idx++;
+    } else if (updates.status !== undefined) {
+      setClauses.push(`approval_status = $${idx}`);
       values.push(updates.status);
       idx++;
     }
@@ -1375,8 +1379,27 @@ app.patch('/api/registrations/:id', requireOrganizer, async (req: Request, res: 
       values.push(updates.hasLunch);
       idx++;
     }
+    if (updates.reviewNotes !== undefined) {
+      setClauses.push(`review_notes = $${idx}`);
+      values.push(updates.reviewNotes);
+      idx++;
+    }
+    if (updates.reviewedBy !== undefined) {
+      setClauses.push(`reviewed_by = $${idx}`);
+      values.push(updates.reviewedBy);
+      idx++;
+    }
 
     if (setClauses.length === 0) return res.status(400).json({ error: 'No fields to update.' });
+
+    // If registration is marked as rejected, purge any matching player from the tournament squad pool
+    const newStatus = updates.approvalStatus || updates.status;
+    if (newStatus === 'rejected') {
+      const regRes = await pool.query('SELECT email, tournament_id FROM public.registrations WHERE id = $1;', [id]);
+      if (regRes.rows.length > 0 && regRes.rows[0].email) {
+        await pool.query('DELETE FROM public.players WHERE LOWER(email) = LOWER($1) AND tournament_id = $2;', [regRes.rows[0].email, regRes.rows[0].tournament_id]).catch(err => console.warn('Purge player notice:', err.message));
+      }
+    }
 
     setClauses.push(`updated_at = timezone('utc'::text, now())`);
     values.push(id);
