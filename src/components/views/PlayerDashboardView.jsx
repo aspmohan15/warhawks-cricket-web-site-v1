@@ -49,7 +49,7 @@ export const PlayerDashboardView = ({
   // Exclude rejected registrations from being considered as active player registrations
   const playerRegistration = (registrations || []).find(r => {
     if (r.tournamentId !== tournament?.id) return false;
-    if (r.approvalStatus === 'rejected') return false;
+    if (r.approvalStatus === 'rejected' || r.approvalStatus === 'cancelled' || r.status === 'cancelled') return false;
     const target = activeEmail.trim().toLowerCase();
     if (!target) return false;
     return (

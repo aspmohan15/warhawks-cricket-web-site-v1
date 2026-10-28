@@ -959,6 +959,19 @@ export const supabaseDb = {
 
   // Registrations (Player and Guest Meal Logistics)
   async getRegistrations(tournamentId) {
+    try {
+      const q = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : '';
+      const res = await fetch(`/api/registrations${q}`);
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows)) {
+          return rows
+            .filter(r => (r.approval_status || r.approvalStatus) !== 'cancelled')
+            .map(mapRegistrationFromDb);
+        }
+      }
+    } catch {}
+
     const client = getSupabaseClient();
     if (!client) return null;
 
@@ -966,6 +979,7 @@ export const supabaseDb = {
       .from('registrations')
       .select('*')
       .eq('tournament_id', tournamentId)
+      .neq('approval_status', 'cancelled')
       .order('application_date', { ascending: false });
 
     if (error) throw error;
@@ -1037,11 +1051,22 @@ export const supabaseDb = {
   },
 
   async cancelRegistration(id) {
+    try {
+      await fetch(`/api/registrations/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (e) {
+      console.warn('API cancelRegistration warning:', e);
+    }
+
     const client = getSupabaseClient();
     if (!client) return null;
 
     const { error } = await client.from('registrations').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      // Fallback: update status to cancelled
+      await client.from('registrations').update({ approval_status: 'cancelled' }).eq('id', id).catch(() => null);
+    }
   },
 
   // Expenses

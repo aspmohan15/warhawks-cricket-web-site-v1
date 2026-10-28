@@ -1276,14 +1276,15 @@ app.delete('/api/matches/:id', requireOrganizer, async (req: Request, res: Respo
 });
 
 // ==============================================================================
-// 5. REGISTRATIONS API (Public Registration + Organizer Status Updates)
+// 5. REGISTRATIONS API (Public Registration + Organizer Status Updates + Cancellation)
 // ==============================================================================
 app.get('/api/registrations', async (req: Request, res: Response) => {
   try {
     const { tournamentId } = req.query;
+    // Always exclude cancelled registrations from organizer and public views
     const query = tournamentId
-      ? 'SELECT * FROM public.registrations WHERE tournament_id = $1 ORDER BY created_at DESC;'
-      : 'SELECT * FROM public.registrations ORDER BY created_at DESC;';
+      ? "SELECT * FROM public.registrations WHERE tournament_id = $1 AND (approval_status != 'cancelled' OR approval_status IS NULL) ORDER BY created_at DESC;"
+      : "SELECT * FROM public.registrations WHERE (approval_status != 'cancelled' OR approval_status IS NULL) ORDER BY created_at DESC;";
     const params = tournamentId ? [tournamentId] : [];
     const result = await pool.query(query, params);
     return res.json(result.rows);
@@ -1397,9 +1398,9 @@ app.patch('/api/registrations/:id', requireOrganizer, async (req: Request, res: 
 
     if (setClauses.length === 0) return res.status(400).json({ error: 'No fields to update.' });
 
-    // If registration is marked as rejected, purge any matching player from the tournament squad pool
+    // If registration is marked as rejected or cancelled, purge any matching player from the tournament squad pool
     const newStatus = updates.approvalStatus || updates.status;
-    if (newStatus === 'rejected') {
+    if (newStatus === 'rejected' || newStatus === 'cancelled') {
       const regRes = await pool.query('SELECT email, tournament_id FROM public.registrations WHERE id = $1;', [id]);
       if (regRes.rows.length > 0 && regRes.rows[0].email) {
         await pool.query('DELETE FROM public.players WHERE LOWER(email) = LOWER($1) AND tournament_id = $2;', [regRes.rows[0].email, regRes.rows[0].tournament_id]).catch(err => console.warn('Purge player notice:', err.message));
@@ -1411,6 +1412,25 @@ app.patch('/api/registrations/:id', requireOrganizer, async (req: Request, res: 
     const query = `UPDATE public.registrations SET ${setClauses.join(', ')} WHERE id = $${idx} RETURNING *;`;
     const result = await pool.query(query, values);
     return res.json(result.rows[0]);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Player or Organizer registration cancellation / deletion endpoint
+app.delete('/api/registrations/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    // Purge corresponding player record if any
+    const regRes = await pool.query('SELECT email, tournament_id FROM public.registrations WHERE id = $1;', [id]);
+    if (regRes.rows.length > 0 && regRes.rows[0].email) {
+      await pool.query(
+        'DELETE FROM public.players WHERE LOWER(email) = LOWER($1) AND tournament_id = $2;',
+        [regRes.rows[0].email, regRes.rows[0].tournament_id]
+      ).catch(() => null);
+    }
+    await pool.query('DELETE FROM public.registrations WHERE id = $1;', [id]);
+    return res.json({ success: true, id, message: 'Registration cancelled and purged.' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

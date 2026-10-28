@@ -142,8 +142,10 @@ export const FoodPreferencesView = ({
     };
   };
 
-  // Exclude rejected player registrations from food & dietary management
-  const validRegistrations = (registrations || []).filter(r => r.approvalStatus !== 'rejected');
+  // Only include approved player registrations in food & dietary management (pending, rejected, and cancelled applications are excluded)
+  const validRegistrations = (registrations || []).filter(
+    r => (r.approvalStatus === 'approved' || r.status === 'approved') && r.approvalStatus !== 'rejected' && r.approvalStatus !== 'cancelled'
+  );
   const parsedRegistrations = validRegistrations.map(getRegistrationMealData);
 
   // High-Level Aggregate Metrics for Warhawks Catering Command
@@ -281,7 +283,7 @@ export const FoodPreferencesView = ({
           </div>
           <h1 className="text-xl font-bold text-slate-900">Food & Dietary Management</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Aggregated match-day nutritional requisitions for players and accompanying guests collected from official registration applications for {tournament?.name || 'Tournament'}.
+            Aggregated match-day nutritional requisitions for approved players and accompanying guests for {tournament?.name || 'Tournament'} (pending, rejected, and cancelled applications are excluded).
           </p>
         </div>
 
@@ -459,7 +461,7 @@ export const FoodPreferencesView = ({
       <div className="md:hidden space-y-3">
         {filteredList.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-xs text-slate-400">
-            {validRegistrations.length === 0 ? 'No player meal requisitions or registrations yet.' : 'No player registration records match the current filter criteria.'}
+            {validRegistrations.length === 0 ? 'No approved player meal requisitions yet (pending and rejected applications are excluded).' : 'No approved player registration records match the current filter criteria.'}
           </div>
         ) : (
           filteredList.map(item => (
@@ -587,7 +589,7 @@ export const FoodPreferencesView = ({
               {filteredList.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-slate-400">
-                    {validRegistrations.length === 0 ? 'No player meal requisitions or registrations yet.' : 'No player registration records match the current filter criteria.'}
+                    {validRegistrations.length === 0 ? 'No approved player meal requisitions yet (pending and rejected applications are excluded).' : 'No approved player registration records match the current filter criteria.'}
                   </td>
                 </tr>
               ) : (

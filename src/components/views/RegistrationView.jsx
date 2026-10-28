@@ -183,21 +183,26 @@ export const RegistrationView = ({
     }
   };
 
-  // Find player's existing registration for this tournament
+  // Filter out any cancelled registrations so they are never visible to the organizer or queue
+  const activeRegistrations = registrations.filter(
+    r => r.approvalStatus !== 'cancelled' && r.status !== 'cancelled'
+  );
+
+  // Find player's existing active registration for this tournament
   const rememberedEmail = currentUser?.email || (typeof window !== 'undefined' ? localStorage.getItem('warhawks_player_email') : '') || '';
-  const myRegistration = registrations.find(
+  const myRegistration = activeRegistrations.find(
     r => r.tournamentId === tournament?.id && r.email?.toLowerCase() === (rememberedEmail || playerForm.email)?.toLowerCase()
   );
 
-  const filteredRegistrations = registrations.filter(r => {
+  const filteredRegistrations = activeRegistrations.filter(r => {
     if (filterStatus !== 'all' && r.approvalStatus !== filterStatus) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
-        r.fullName.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        r.primaryRole.toLowerCase().includes(q) ||
-        r.city.toLowerCase().includes(q)
+        r.fullName?.toLowerCase().includes(q) ||
+        r.email?.toLowerCase().includes(q) ||
+        r.primaryRole?.toLowerCase().includes(q) ||
+        r.city?.toLowerCase().includes(q)
       );
     }
     return true;
@@ -422,18 +427,18 @@ export const RegistrationView = ({
           <div className="grid grid-cols-3 gap-2 shrink-0">
             <div className="p-2 sm:p-2.5 bg-slate-50 rounded-lg text-center">
               <span className="block text-slate-400 text-[10px] uppercase font-semibold">Total</span>
-              <span className="font-mono font-bold text-slate-900 text-sm sm:text-base">{registrations.length}</span>
+              <span className="font-mono font-bold text-slate-900 text-sm sm:text-base">{activeRegistrations.length}</span>
             </div>
             <div className="p-2 sm:p-2.5 bg-emerald-50 rounded-lg text-center">
               <span className="block text-emerald-700 text-[10px] uppercase font-semibold">Approved</span>
               <span className="font-mono font-bold text-emerald-900 text-sm sm:text-base">
-                {registrations.filter(r => r.approvalStatus === 'approved').length}
+                {activeRegistrations.filter(r => r.approvalStatus === 'approved').length}
               </span>
             </div>
             <div className="p-2 sm:p-2.5 bg-amber-50 rounded-lg text-center">
               <span className="block text-amber-700 text-[10px] uppercase font-semibold">Pending</span>
               <span className="font-mono font-bold text-amber-900 text-sm sm:text-base">
-                {registrations.filter(r => r.approvalStatus === 'pending').length}
+                {activeRegistrations.filter(r => r.approvalStatus === 'pending').length}
               </span>
             </div>
           </div>
@@ -806,7 +811,7 @@ export const RegistrationView = ({
                       <span>Accompanying Guests & Independent Dietary Preferences</span>
                     </h3>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Register accompanying guests. Every registered guest must have their independent dietary preference selected below.
+                      Register accompanying guests (complimentary admission — no additional fee charged for guests). Every registered guest can have their independent dietary preference selected below.
                     </p>
 
                     <div className="bg-slate-50 rounded-xl p-3.5 sm:p-4 border border-slate-200 space-y-4">
@@ -973,18 +978,18 @@ export const RegistrationView = ({
                                 ₹{tournament?.registrationFee ?? settings?.registrationFee ?? 1500}
                               </span>
                             </div>
-                            {playerForm.guestCount > 0 && (
+                            {Number(playerForm.guestCount) > 0 && (
                               <div className="flex items-center justify-between text-slate-600">
-                                <span>Guest Accompaniment ({playerForm.guestCount} × ₹500):</span>
-                                <span className="font-mono font-bold text-slate-900">
-                                  ₹{playerForm.guestCount * 500}
+                                <span>Guest Accompaniment ({playerForm.guestCount} guest{Number(playerForm.guestCount) > 1 ? 's' : ''}):</span>
+                                <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200">
+                                  Complimentary (₹0 extra)
                                 </span>
                               </div>
                             )}
                             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between font-bold text-sm text-slate-900">
                               <span>Total Payable Amount:</span>
                               <span className="font-mono text-emerald-700">
-                                ₹{(tournament?.registrationFee ?? settings?.registrationFee ?? 1500) + (playerForm.guestCount * 500)}
+                                ₹{tournament?.registrationFee ?? settings?.registrationFee ?? 1500}
                               </span>
                             </div>
                           </div>
