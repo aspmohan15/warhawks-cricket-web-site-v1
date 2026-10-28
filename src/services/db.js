@@ -910,10 +910,13 @@ class TournamentDatabase {
     if (!tournament.registrationOpen) throw new Error('Tournament registration is closed for this edition.');
 
     const existing = (this.schema.registrations || []).find(
-      r => r.tournamentId === data.tournamentId && r.email?.toLowerCase() === data.email?.toLowerCase()
+      r => r.tournamentId === data.tournamentId &&
+           r.email?.toLowerCase() === data.email?.toLowerCase() &&
+           r.approvalStatus !== 'cancelled' &&
+           r.status !== 'cancelled'
     );
     if (existing) {
-      throw new Error('A registration application with this email already exists for this edition.');
+      throw new Error('An active registration application with this email already exists for this edition.');
     }
 
     const guestCount = Math.max(0, parseInt(data.guestCount ?? data.guestNumber, 10) || 0);

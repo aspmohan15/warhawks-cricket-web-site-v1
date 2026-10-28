@@ -987,6 +987,16 @@ export const supabaseDb = {
   },
 
   async createRegistration(reg) {
+    try {
+      await fetch('/api/registrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reg)
+      });
+    } catch (e) {
+      console.warn('API createRegistration error:', e);
+    }
+
     const client = getSupabaseClient();
     if (!client) return null;
 
