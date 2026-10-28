@@ -19,20 +19,24 @@ import {
 import { Modal } from '../common/Modal';
 import { WARHAWKS_LOGO_URL } from '../../constants';
 import { formatOptionBDate } from '../../utils/date';
+import { getOrganizerSession } from '../../services/auth';
 
 const DEFAULT_CRICHEROES_URL = 'https://cricheroes.com/tournament/1999506/warhawk-tournament-s04/matches/live-matches';
 
-const getCricHeroesLinks = (url) => {
+const getCricHeroesLinks = (url, fallbackTournamentName = '') => {
   const defaultBase = 'https://cricheroes.com/tournament/1999506/warhawk-tournament-s04';
+  const cleanUrl = String(url || '').trim();
   try {
-    const match = url?.match(/cricheroes\.com\/tournament\/([0-9]+)\/([^\/?#]+)/i);
+    const match = cleanUrl.match(/cricheroes\.com\/tournament\/([0-9]+)\/([^\/?#]+)/i);
     if (match) {
       const tourId = match[1];
       const tourSlug = match[2];
       const base = `https://cricheroes.com/tournament/${tourId}/${tourSlug}`;
+      const humanSlug = tourSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       return {
         tournamentId: tourId,
         tournamentSlug: tourSlug,
+        displayName: fallbackTournamentName || humanSlug,
         base,
         live: `${base}/matches/live-matches`,
         upcoming: `${base}/matches/upcoming-matches`,
@@ -45,12 +49,13 @@ const getCricHeroesLinks = (url) => {
   return {
     tournamentId: '1999506',
     tournamentSlug: 'warhawk-tournament-s04',
-    base: defaultBase,
-    live: `${defaultBase}/matches/live-matches`,
-    upcoming: `${defaultBase}/matches/upcoming-matches`,
-    past: `${defaultBase}/matches/past-matches`,
-    pointsTable: `${defaultBase}/point-table`,
-    leaderboard: `${defaultBase}/leaderboard`
+    displayName: fallbackTournamentName || 'Warhawks Tournament',
+    base: cleanUrl || defaultBase,
+    live: cleanUrl ? (cleanUrl.includes('/matches/') ? cleanUrl : `${cleanUrl.replace(/\/$/, '')}/matches/live-matches`) : `${defaultBase}/matches/live-matches`,
+    upcoming: cleanUrl ? (cleanUrl.includes('/matches/') ? cleanUrl.replace(/live-matches|past-matches/, 'upcoming-matches') : `${cleanUrl.replace(/\/$/, '')}/matches/upcoming-matches`) : `${defaultBase}/matches/upcoming-matches`,
+    past: cleanUrl ? (cleanUrl.includes('/matches/') ? cleanUrl.replace(/live-matches|upcoming-matches/, 'past-matches') : `${cleanUrl.replace(/\/$/, '')}/matches/past-matches`) : `${defaultBase}/matches/past-matches`,
+    pointsTable: cleanUrl ? `${cleanUrl.split('/matches/')[0].replace(/\/$/, '')}/point-table` : `${defaultBase}/point-table`,
+    leaderboard: cleanUrl ? `${cleanUrl.split('/matches/')[0].replace(/\/$/, '')}/leaderboard` : `${defaultBase}/leaderboard`
   };
 };
 
@@ -63,39 +68,43 @@ export const FixturesResultsView = ({
   onCreateMatch,
   onUpdateMatch,
   onDeleteMatch,
-  onNavigateToEditions
+  onNavigateToEditions,
+  onUpdateTournament
 }) => {
   const isOrganizer = currentUser?.role === 'organizer';
   const [filterStatus, setFilterStatus] = useState('all');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [scoringMatch, setScoringMatch] = useState(null);
 
-  // CricHeroes Live URL State
-  const [liveUrl, setLiveUrl] = useState(() => {
-    try {
-      const stored = localStorage.getItem(`warhawks_cricheroes_url_${tournament?.id}`) || localStorage.getItem('warhawks_cricheroes_url');
-      if (stored) return stored;
-    } catch {}
-    return DEFAULT_CRICHEROES_URL;
-  });
+  // Dynamic CricHeroes Live URL State: prioritize database tournament setting, with browser fallback
+  const resolveCricHeroesUrl = (t) => {
+    return (
+      t?.cricheroesUrl ||
+      t?.cricheroes_url ||
+      (typeof window !== 'undefined'
+        ? localStorage.getItem(`warhawks_cricheroes_url_${t?.id}`) || localStorage.getItem('warhawks_cricheroes_url')
+        : '') ||
+      DEFAULT_CRICHEROES_URL
+    );
+  };
+
+  const [liveUrl, setLiveUrl] = useState(() => resolveCricHeroesUrl(tournament));
   const [configUrlModalOpen, setConfigUrlModalOpen] = useState(false);
-  const [tempUrl, setTempUrl] = useState(liveUrl);
-  const cricLinks = useMemo(() => getCricHeroesLinks(liveUrl), [liveUrl]);
+  const [tempUrl, setTempUrl] = useState(() => resolveCricHeroesUrl(tournament));
+  const cricLinks = useMemo(
+    () => getCricHeroesLinks(liveUrl, tournament?.name),
+    [liveUrl, tournament?.name]
+  );
   const [activeTab, setActiveTab] = useState('all');
 
+  // Synchronize when tournament or tournament.cricheroesUrl updates from server/database
   useEffect(() => {
-    if (tournament?.id) {
-      try {
-        const stored = localStorage.getItem(`warhawks_cricheroes_url_${tournament?.id}`) || localStorage.getItem('warhawks_cricheroes_url');
-        if (stored) {
-          setLiveUrl(stored);
-          setTempUrl(stored);
-        }
-      } catch {}
-    }
-  }, [tournament?.id]);
+    const url = resolveCricHeroesUrl(tournament);
+    setLiveUrl(url);
+    setTempUrl(url);
+  }, [tournament?.id, tournament?.cricheroesUrl, tournament?.cricheroes_url]);
 
-  const handleSaveLiveUrl = (e) => {
+  const handleSaveLiveUrl = async (e) => {
     e.preventDefault();
     const clean = tempUrl.trim() || DEFAULT_CRICHEROES_URL;
     setLiveUrl(clean);
@@ -103,6 +112,26 @@ export const FixturesResultsView = ({
       localStorage.setItem(`warhawks_cricheroes_url_${tournament?.id}`, clean);
       localStorage.setItem('warhawks_cricheroes_url', clean);
     } catch {}
+
+    // Persist to tournament database so that players across all sessions receive the updated live URL immediately
+    if (tournament?.id) {
+      if (onUpdateTournament) {
+        onUpdateTournament(tournament.id, { cricheroesUrl: clean, cricheroes_url: clean });
+      }
+      try {
+        const session = getOrganizerSession();
+        await fetch(`/api/tournaments/${tournament.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.token || ''}`
+          },
+          body: JSON.stringify({ cricheroesUrl: clean, cricheroes_url: clean })
+        });
+      } catch (err) {
+        console.warn('API save cricheroesUrl notification:', err);
+      }
+    }
     setConfigUrlModalOpen(false);
   };
 
@@ -360,7 +389,7 @@ export const FixturesResultsView = ({
                   </span>
                 </div>
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-black tracking-tight text-white">
-                  Warhawk Tournament S04 — Match Center
+                  {tournament?.name || cricLinks.displayName || 'Tournament'} — Match Center
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                   Real-time ball-by-ball updates, wagon wheels, over summaries, and official tournament scorecards powered by CricHeroes.
@@ -1213,7 +1242,7 @@ export const FixturesResultsView = ({
                 onClick={() => setTempUrl(DEFAULT_CRICHEROES_URL)}
                 className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold cursor-pointer underline mt-1"
               >
-                Reset to Default Season 4 URL
+                Reset to Default Official URL
               </button>
             </div>
 

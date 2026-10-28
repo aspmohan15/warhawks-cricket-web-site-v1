@@ -646,6 +646,8 @@ const mapTournamentRow = (row: any) => ({
   upi_mobile_number: row.upi_mobile_number || row.upiMobileNumber || '',
   payeeName: row.payee_name || row.payeeName || 'Warhawks Tournament Operations',
   payee_name: row.payee_name || row.payeeName || 'Warhawks Tournament Operations',
+  cricheroesUrl: row.cricheroes_url || row.cricheroesUrl || '',
+  cricheroes_url: row.cricheroes_url || row.cricheroesUrl || '',
   registrationFee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
   registration_fee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
   isArchived: Boolean(row.is_archived ?? row.isArchived),
@@ -683,14 +685,14 @@ app.post('/api/tournaments', requireOrganizer, async (req: Request, res: Respons
         registration_start_date, registration_end_date, total_budget_points_per_team,
         points_per_win, points_per_tie, max_squad_size, min_squad_size,
         max_overseas_players, description, upi_qr_code_url, upi_id, registration_fee,
-        upi_mobile_number, payee_name, is_archived
+        upi_mobile_number, payee_name, is_archived, cricheroes_url
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8,
         $9, $10, $11, $12, $13, $14,
         $15, $16, $17,
         $18, $19, $20, $21,
         $22, $23, $24, $25, $26,
-        $27, $28, $29
+        $27, $28, $29, $30
       )
       RETURNING *;
     `;
@@ -723,7 +725,8 @@ app.post('/api/tournaments', requireOrganizer, async (req: Request, res: Respons
       Number(t.registrationFee ?? t.registration_fee) || 1500,
       t.upiMobileNumber || t.upi_mobile_number || '',
       t.payeeName || t.payee_name || 'Warhawks Tournament Operations',
-      Boolean(t.isArchived)
+      Boolean(t.isArchived),
+      t.cricheroesUrl || t.cricheroes_url || ''
     ];
 
     const result = await pool.query(query, values);
@@ -796,7 +799,9 @@ app.patch('/api/tournaments/:id', requireOrganizer, async (req: Request, res: Re
       registrationFee: 'registration_fee',
       registration_fee: 'registration_fee',
       isArchived: 'is_archived',
-      is_archived: 'is_archived'
+      is_archived: 'is_archived',
+      cricheroesUrl: 'cricheroes_url',
+      cricheroes_url: 'cricheroes_url'
     };
 
     const setClauses: string[] = [];
@@ -1910,6 +1915,7 @@ async function startServer() {
       );
       ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS advance_amount NUMERIC NOT NULL DEFAULT 0;
       ALTER TABLE public.tournaments ADD COLUMN IF NOT EXISTS upi_mobile_number TEXT;
+      ALTER TABLE public.tournaments ADD COLUMN IF NOT EXISTS cricheroes_url TEXT;
       CREATE INDEX IF NOT EXISTS idx_expenses_tour_date ON public.expenses(tournament_id, date DESC);
 
       CREATE TABLE IF NOT EXISTS public.rules (

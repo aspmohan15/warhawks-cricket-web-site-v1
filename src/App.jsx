@@ -315,6 +315,7 @@ export default function App() {
 
   const handleUpdateTournament = (id, updates) => {
     db.updateTournament(id, updates);
+    setTournaments(db.getTournaments());
     refreshTournamentData(activeTournamentId);
     showToast('Tournament parameters updated', 'success');
   };
@@ -815,6 +816,7 @@ export default function App() {
                   onUpdateMatch={handleUpdateMatch}
                   onDeleteMatch={handleDeleteMatch}
                   onNavigateToEditions={() => setCurrentSection('editions')}
+                  onUpdateTournament={handleUpdateTournament}
                 />
               )}
 

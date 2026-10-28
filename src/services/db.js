@@ -274,6 +274,7 @@ class TournamentDatabase {
       upiMobileNumber: data.upiMobileNumber || data.upi_mobile_number || '',
       payeeName: data.payeeName || data.payee_name || 'Warhawks Tournament Operations',
       registrationFee: Number(data.registrationFee ?? data.registration_fee) || 1500,
+      cricheroesUrl: data.cricheroesUrl || data.cricheroes_url || '',
       isArchived: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

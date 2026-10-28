@@ -33,6 +33,8 @@ const mapTournamentFromDb = (row) => ({
   upiId: row.upi_id || row.upiId || '',
   upiMobileNumber: row.upi_mobile_number || row.upiMobileNumber || '',
   payeeName: row.payee_name || row.payeeName || 'Warhawks Tournament Operations',
+  cricheroesUrl: row.cricheroes_url || row.cricheroesUrl || '',
+  cricheroes_url: row.cricheroes_url || row.cricheroesUrl || '',
   registrationFee: row.registration_fee !== undefined ? Number(row.registration_fee) : (row.registrationFee !== undefined ? Number(row.registrationFee) : 1500),
   isArchived: Boolean(row.is_archived ?? row.isArchived),
   createdAt: row.created_at ?? row.createdAt,
@@ -393,7 +395,8 @@ export const supabaseDb = {
       upi_mobile_number: t.upiMobileNumber || t.upi_mobile_number || '',
       payee_name: t.payeeName || t.payee_name || 'Warhawks Tournament Operations',
       registration_fee: Number(t.registrationFee ?? t.registration_fee) || 1500,
-      is_archived: Boolean(t.isArchived)
+      is_archived: Boolean(t.isArchived),
+      cricheroes_url: t.cricheroesUrl || t.cricheroes_url || ''
     };
 
     const { data, error } = await client.from('tournaments').insert([row]).select().single();
@@ -452,6 +455,8 @@ export const supabaseDb = {
     if (updates.upi_mobile_number !== undefined) row.upi_mobile_number = updates.upi_mobile_number;
     if (updates.payeeName !== undefined) row.payee_name = updates.payeeName;
     if (updates.payee_name !== undefined) row.payee_name = updates.payee_name;
+    if (updates.cricheroesUrl !== undefined) row.cricheroes_url = updates.cricheroesUrl;
+    if (updates.cricheroes_url !== undefined) row.cricheroes_url = updates.cricheroes_url;
     if (updates.registrationFee !== undefined) row.registration_fee = updates.registrationFee;
     if (updates.registration_fee !== undefined) row.registration_fee = updates.registration_fee;
     if (updates.isArchived !== undefined) row.is_archived = updates.isArchived;
